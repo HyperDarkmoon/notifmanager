@@ -1,23 +1,58 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import company from './imgs/company.png';
 import './App.css';
 
 function App() {
+  const [selectedTV, setSelectedTV] = useState(1);
+
+  const handleSliderChange = (event) => {
+    setSelectedTV(parseInt(event.target.value));
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-content">
+          <img src={company} alt="Company Logo" className="company-logo" />
+          <h1 className="navbar-title">Notification Manager</h1>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <div className="tv-selector-container">
+          <h2>Select a TV</h2>
+          <div className="slider-container">
+            <label htmlFor="tv-slider" className="slider-label">
+              TV {selectedTV}
+            </label>
+            <input
+              id="tv-slider"
+              type="range"
+              min="1"
+              max="4"
+              value={selectedTV}
+              onChange={handleSliderChange}
+              className="tv-slider"
+            />
+            <div className="slider-labels">
+              <span>TV 1</span>
+              <span>TV 2</span>
+              <span>TV 3</span>
+              <span>TV 4</span>
+            </div>
+          </div>
+          
+          <div className="selected-tv-display">
+            <h3>Currently Selected:</h3>
+            <div className="tv-card">
+              <div className="tv-icon">📺</div>
+              <p>Television {selectedTV}</p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
