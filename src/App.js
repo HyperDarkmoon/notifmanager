@@ -21,6 +21,15 @@ function NavigationLayoutWithLogout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Add sidebar state class to body
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-closed', !sidebarOpen);
+    // Force a layout recalculation to ensure proper sizing
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 300);
+  }, [sidebarOpen]);
 
   // Get current TV number from the path
   const getCurrentTV = () => {

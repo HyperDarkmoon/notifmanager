@@ -1,25 +1,46 @@
 :root {
   --sidebar-width: 240px;
+  --navbar-height: 72px;
+  --content-indicator-height: 40px;
+}
+
+/* Ensure all elements include padding in their width/height */
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
+/* Hide scrollbars but allow scrolling if absolutely necessary */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;
+}
+
+html, body {
+  overflow: hidden;
+  height: 100%;
 }
 
 /* TV Page Styles */
 .tv-page {
   padding: 0;
   width: calc(100% - var(--sidebar-width));
-  height: calc(100vh - 72px); /* Account for navbar height */
+  height: calc(100vh - var(--navbar-height)); /* Use CSS variable for navbar height */
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: absolute;
-  top: 72px; /* Navbar height */
+  position: fixed;
+  top: var(--navbar-height);
   left: var(--sidebar-width);
   right: 0;
   bottom: 0;
   transition: left 0.3s ease, width 0.3s ease;
+  box-sizing: border-box;
 }
 
 /* When sidebar is closed, expand to full width */
-.sidebar.closed ~ .tv-page {
+.sidebar.closed ~ main .tv-page,
+body.sidebar-closed .tv-page {
   left: 0;
   width: 100%;
 }
@@ -194,9 +215,14 @@
 
 /* Info Display (Temperature, Pressure, Time) */
 .tv-info-display {
-  padding: 2rem;
+  padding: 1.5rem 2rem var(--content-indicator-height) 2rem; /* Add bottom padding for indicator */
   height: 100%;
+  flex: 1;
   background: linear-gradient(135deg, #f0f4f8 0%, #d8e1f3 100%);
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .tv-info-display h2 {
@@ -212,7 +238,8 @@
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 2rem;
-  height: calc(100% - 100px);
+  flex: 1;
+  max-height: calc(100% - 80px);
 }
 
 .info-item {
@@ -246,12 +273,15 @@
 
 /* Message Display */
 .tv-message-display {
-  padding: 2rem;
+  padding: 2rem 2rem var(--content-indicator-height) 2rem; /* Add bottom padding for indicator */
   height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .message-content {
@@ -267,7 +297,7 @@
 }
 
 .message-text {
-  font-size: 4rem;
+  font-size: min(4rem, 5vw);
   line-height: 1.4;
   font-weight: 300;
   color: #2d3748;
@@ -275,13 +305,16 @@
 
 /* Custom Content Display */
 .tv-custom-display {
-  padding: 0;
+  padding: 0 0 var(--content-indicator-height) 0; /* Add bottom padding for indicator */
   width: 100%;
   height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  max-height: 100%;
 }
 
 .custom-file {
@@ -331,10 +364,12 @@
 .custom-content-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* Changed from cover to contain for better display */
   border-radius: 0;
   box-shadow: none;
   margin: 0;
+  display: block; /* Ensure proper display */
+  max-height: 100%;
 }
 
 .custom-embed {
@@ -353,6 +388,8 @@
   width: 100%;
   height: 100%;
   flex: 1;
+  max-height: calc(100% - var(--content-indicator-height)); /* Account for indicator */
+  overflow: hidden;
 }
 
 /* Single image takes full space */
@@ -376,6 +413,7 @@
   overflow: hidden;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
 }
 
 .custom-file {
@@ -394,25 +432,21 @@
   z-index: 10;
 }
 
-.tv-custom-display {
-  width: 100%;
-  height: 100%;
-  flex: 1;
-  display: flex;
-  padding: 0;
-  margin: 0;
-}
+/* Additional custom display styles moved to main rule above */
 
 /* Content Indicators */
 .content-indicator {
   position: absolute;
-  bottom: 1rem;
+  bottom: 0;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
   gap: 1rem;
-  z-index: 10;
+  z-index: 100;
+  padding: 12px 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+  pointer-events: none; /* Prevent indicator from blocking interaction */
 }
 
 .indicator-dot {
@@ -422,6 +456,7 @@
   background: rgba(255, 255, 255, 0.7);
   transition: all 0.3s ease;
   border: 1px solid rgba(0, 0, 0, 0.2);
+  margin-bottom: 10px; /* Lift dots up a bit from bottom */
 }
 
 .indicator-dot.active {
@@ -438,24 +473,35 @@
   }
   
   .tv-page {
-    padding: 1rem;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - var(--navbar-height)); /* Use variable */
   }
   
-  .tv-page-header {
-    padding: 1.5rem;
+  .tv-message-display {
+    padding: 1rem 1rem var(--content-indicator-height) 1rem; /* Keep indicator space */
+  }
+  
+  .message-icon {
+    font-size: 4rem;
     margin-bottom: 2rem;
   }
   
-  .tv-page-header h1 {
-    font-size: 2rem;
+  .message-text {
+    font-size: min(3rem, 6vw);
   }
   
-  .notification-section,
-  .tv-controls {
-    padding: 1.5rem;
-  }
-  
-  .control-buttons {
+  .info-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+  }
+  
+  .info-icon {
+    font-size: 2.5rem;
+    margin-right: 1.5rem;
+  }
+  
+  .info-value {
+    font-size: 2rem;
   }
 }
