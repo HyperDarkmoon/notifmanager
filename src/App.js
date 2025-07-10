@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import company from './imgs/company.png';
 import './App.css';
 import TV1 from './tvpages/tv1';
@@ -7,9 +7,10 @@ import TV2 from './tvpages/tv2';
 import TV3 from './tvpages/tv3';
 import TV4 from './tvpages/tv4';
 import Login from './components/Login';
+import Signup from './components/Signup';
 
 // Component to handle navigation and layout
-function NavigationLayout() {
+function NavigationLayoutWithLogout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +44,11 @@ function NavigationLayout() {
           </button>
           <img src={company} alt="Company Logo" className="company-logo" />
           <h1 className="navbar-title">Notification Manager</h1>
+          <div className="navbar-actions">
+            <button className="logout-button" onClick={onLogout}>
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -100,19 +106,41 @@ function NavigationLayout() {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  useEffect(() => {
+    // Check if user is already logged in
+    const user = localStorage.getItem('user');
+    if (user) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   const handleLogin = (success) => {
     setIsAuthenticated(success);
   };
 
-  // Show login screen if not authenticated
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
+  const handleSignupSuccess = () => {
+    // Redirect to login after successful signup
+    window.location.href = '/login';
+  };
 
-  // Show main app if authenticated
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+  };
+
   return (
     <Router>
-      <NavigationLayout />
+      <Routes>
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
+        } />
+        <Route path="/signup" element={
+          isAuthenticated ? <Navigate to="/" /> : <Signup onSignupSuccess={handleSignupSuccess} />
+        } />
+        <Route path="*" element={
+          isAuthenticated ? <NavigationLayoutWithLogout onLogout={handleLogout} /> : <Navigate to="/login" />
+        } />
+      </Routes>
     </Router>
   );
 }

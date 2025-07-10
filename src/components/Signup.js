@@ -2,19 +2,39 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import company from '../imgs/company.png';
 
-function Login({ onLogin }) {
+function Signup({ onSignupSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const validateForm = () => {
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
-
+    
     try {
-      const response = await fetch('http://localhost:8090/api/auth/signin', {
+      const response = await fetch('http://localhost:8090/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,12 +45,10 @@ function Login({ onLogin }) {
         }),
       });
       
-      // Check for response status first
+      // Check response status first
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid username or password');
-        } else if (response.status === 404) {
-          throw new Error('Account not found');
+        if (response.status === 409) {
+          throw new Error('Username already exists');
         } else if (response.status >= 500) {
           throw new Error('Server error. Please try again later');
         }
@@ -57,18 +75,11 @@ function Login({ onLogin }) {
         throw new Error(data.error);
       }
       
-      // Store user info in local storage or context
-      if (data && data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Login successful
-        onLogin(true);
-      } else {
-        throw new Error('Invalid response data from server');
-      }
+      // Signup successful
+      onSignupSuccess();
     } catch (error) {
-      console.error('Login error:', error);
-      setError(error.message || 'Failed to login. Please check your credentials.');
+      console.error('Signup error:', error);
+      setError(error.message || 'Failed to register. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +92,7 @@ function Login({ onLogin }) {
           <div className="login-header">
             <img src={company} alt="Company Logo" className="login-logo" />
             <h1 className="login-title">Notification Manager</h1>
-            <p className="login-subtitle">Sign in to manage your TV notifications</p>
+            <p className="login-subtitle">Create your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -93,7 +104,7 @@ function Login({ onLogin }) {
                 className="form-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Choose a username"
                 required
               />
             </div>
@@ -106,7 +117,20 @@ function Login({ onLogin }) {
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Choose a password"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                className="form-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
                 required
               />
             </div>
@@ -126,16 +150,16 @@ function Login({ onLogin }) {
               {isLoading ? (
                 <>
                   <span className="loading-spinner"></span>
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
-                'Sign In'
+                'Sign Up'
               )}
             </button>
           </form>
 
           <div className="login-footer">
-            <p>Don't have an account? <Link to="/signup" className="auth-link">Sign Up</Link></p>
+            <p>Already have an account? <Link to="/login" className="auth-link">Sign In</Link></p>
           </div>
         </div>
       </div>
@@ -143,4 +167,4 @@ function Login({ onLogin }) {
   );
 }
 
-export default Login;
+export default Signup;
