@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/tvpage.css';
 
 function TV4() {
@@ -7,6 +7,8 @@ function TV4() {
   const [pressure, setPressure] = useState(1013.25);
   const [randomText, setRandomText] = useState('');
   const [customContent, setCustomContent] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const prevContentRef = useRef(null);
   
   const getRandomText = () => {
     const texts = [
@@ -22,7 +24,7 @@ function TV4() {
     return texts[Math.floor(Math.random() * texts.length)];
   };
   
-  // Simulating temperature and pressure changes
+  // Simulating temperature and pressure changes, and updating time
   useEffect(() => {
     const interval = setInterval(() => {
       setTemperature(prevTemp => {
@@ -34,7 +36,10 @@ function TV4() {
         const newPressure = prevPressure + (Math.random() * 5 - 2.5);
         return parseFloat(newPressure.toFixed(2));
       });
-    }, 10000); // Update every 10 seconds
+      
+      // Update current time every second
+      setCurrentTime(new Date());
+    }, 1000); // Update every second to keep time accurate
     
     return () => clearInterval(interval);
   }, []);
@@ -54,11 +59,23 @@ function TV4() {
         
         // For now, check localStorage as a simulation
         const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
-        if (currentUploads['4']) {
-          setCustomContent(currentUploads['4']);
+        const tv4Content = currentUploads['4'];
+        
+        // Log the content we're checking with more details
+        console.log(`TV4 - Checking for content:`, tv4Content);
+        
+        // Compare with previous content to see if it changed
+        const prevContentStr = JSON.stringify(prevContentRef.current);
+        const newContentStr = JSON.stringify(tv4Content);
+        
+        if (prevContentStr !== newContentStr) {
+          console.log(`TV4 - Content changed, updating state`);
+          setCustomContent(tv4Content || null);
+          prevContentRef.current = tv4Content;
         }
       } catch (error) {
         console.error('Error fetching custom content:', error);
+        setCustomContent(null);
       }
     };
     
@@ -87,8 +104,17 @@ function TV4() {
     // Calculate how many content types we have (2 or 3 depending on customContent)
     const contentCount = customContent ? 3 : 2;
     
+    console.log(`TV4 - Content count: ${contentCount}, Custom content present: ${Boolean(customContent)}`);
+    
+    // Force reset the content index to ensure we start the rotation properly
+    setContentIndex(0);
+    
     const interval = setInterval(() => {
-      setContentIndex(prevIndex => (prevIndex + 1) % contentCount);
+      setContentIndex(prevIndex => {
+        const nextIndex = (prevIndex + 1) % contentCount;
+        console.log(`TV4 - Rotating content: ${prevIndex} -> ${nextIndex}, Content types: ${contentCount}`);
+        return nextIndex;
+      });
     }, rotationPeriod);
     
     return () => clearInterval(interval);
@@ -96,6 +122,8 @@ function TV4() {
   
   // Render different content based on current index
   const renderContent = () => {
+    console.log(`TV4 - Rendering content index: ${contentIndex}, Has custom content: ${Boolean(customContent)}`);
+    
     // If we don't have custom content and index would be 2, show index 0 instead
     const effectiveIndex = !customContent && contentIndex === 2 ? 0 : contentIndex;
     
@@ -123,14 +151,14 @@ function TV4() {
                 <div className="info-icon">🕒</div>
                 <div className="info-data">
                   <h3>Current Time</h3>
-                  <p className="info-value">{new Date().toLocaleTimeString()}</p>
+                  <p className="info-value">{currentTime.toLocaleTimeString()}</p>
                 </div>
               </div>
               <div className="info-item">
                 <div className="info-icon">📅</div>
                 <div className="info-data">
                   <h3>Date</h3>
-                  <p className="info-value">{new Date().toLocaleDateString()}</p>
+                  <p className="info-value">{currentTime.toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
