@@ -60,7 +60,18 @@ function Login({ onLogin }) {
       
       // Store user info in local storage or context
       if (data && data.user) {
+        // Store both user data and role
         localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // For development testing with static test account
+        if (username === 'admin' && password === 'admin') {
+          localStorage.setItem('userRole', 'ADMIN');
+        } else if (username === 'test' && password === 'test') {
+          localStorage.setItem('userRole', 'USER');
+        } else {
+          // In production, this would come from the backend
+          localStorage.setItem('userRole', data.user.role || 'USER');
+        }
         
         // Login successful
         onLogin(true);

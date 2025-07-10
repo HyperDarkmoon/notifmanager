@@ -1,15 +1,193 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/tvpage.css';
 
 function TV1() {
+  const [contentIndex, setContentIndex] = useState(0);
+  const [temperature, setTemperature] = useState(23.8);
+  const [pressure, setPressure] = useState(1010.75);
+  const [randomText, setRandomText] = useState('');
+  const [customContent, setCustomContent] = useState(null);
+  
+  const getRandomText = () => {
+    const texts = [
+      "Welcome to our company! We're glad you're here.",
+      "Did you know? Taking regular breaks increases productivity.",
+      "Today's focus: Quality and customer satisfaction.",
+      "Remember to hydrate throughout the day!",
+      "Our quarterly goals are on track - great teamwork everyone!",
+      "Innovation is the key to our success.",
+      "Safety first! Remember our workplace guidelines.",
+      "Thank you for your continued dedication to excellence."
+    ];
+    return texts[Math.floor(Math.random() * texts.length)];
+  };
+  
+  // Simulating temperature and pressure changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTemperature(prevTemp => {
+        const newTemp = prevTemp + (Math.random() * 2 - 1);
+        return parseFloat(newTemp.toFixed(1));
+      });
+      
+      setPressure(prevPressure => {
+        const newPressure = prevPressure + (Math.random() * 5 - 2.5);
+        return parseFloat(newPressure.toFixed(2));
+      });
+    }, 10000); // Update every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Fetch custom content for this TV
+  useEffect(() => {
+    // In a real application, you would fetch this from your backend
+    // For now, we'll just use localStorage as a simulation
+    const fetchCustomContent = async () => {
+      try {
+        // Simulated API call
+        // const response = await fetch(`http://localhost:8090/api/tv/1/content`);
+        // const data = await response.json();
+        // if (data && data.content) {
+        //   setCustomContent(data.content);
+        // }
+        
+        // For now, check localStorage as a simulation
+        const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
+        if (currentUploads['1']) {
+          setCustomContent(currentUploads['1']);
+        }
+      } catch (error) {
+        console.error('Error fetching custom content:', error);
+      }
+    };
+    
+    fetchCustomContent();
+    
+    // Set up an interval to check for updates
+    const interval = setInterval(fetchCustomContent, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Set new random text periodically
+  useEffect(() => {
+    setRandomText(getRandomText());
+    const interval = setInterval(() => {
+      setRandomText(getRandomText());
+    }, 30000); // New text every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Content rotation logic
+  useEffect(() => {
+    const rotationPeriod = 10000; // 10 seconds per content type
+    
+    // Calculate how many content types we have (2 or 3 depending on customContent)
+    const contentCount = customContent ? 3 : 2;
+    
+    const interval = setInterval(() => {
+      setContentIndex(prevIndex => (prevIndex + 1) % contentCount);
+    }, rotationPeriod);
+    
+    return () => clearInterval(interval);
+  }, [customContent]);
+  
+  // Render different content based on current index
+  const renderContent = () => {
+    // If we don't have custom content and index would be 2, show index 0 instead
+    const effectiveIndex = !customContent && contentIndex === 2 ? 0 : contentIndex;
+    
+    switch (effectiveIndex) {
+      case 0:
+        return (
+          <div className="tv-info-display">
+            <h2>Current Conditions</h2>
+            <div className="info-grid">
+              <div className="info-item">
+                <div className="info-icon">🌡️</div>
+                <div className="info-data">
+                  <h3>Temperature</h3>
+                  <p className="info-value">{temperature}°C</p>
+                </div>
+              </div>
+              <div className="info-item">
+                <div className="info-icon">📊</div>
+                <div className="info-data">
+                  <h3>Pressure</h3>
+                  <p className="info-value">{pressure} hPa</p>
+                </div>
+              </div>
+              <div className="info-item">
+                <div className="info-icon">🕒</div>
+                <div className="info-data">
+                  <h3>Current Time</h3>
+                  <p className="info-value">{new Date().toLocaleTimeString()}</p>
+                </div>
+              </div>
+              <div className="info-item">
+                <div className="info-icon">📅</div>
+                <div className="info-data">
+                  <h3>Date</h3>
+                  <p className="info-value">{new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="tv-message-display">
+            <div className="message-content">
+              <div className="message-icon">📢</div>
+              <div className="message-text">{randomText}</div>
+            </div>
+          </div>
+        );
+      case 2:
+        if (customContent) {
+          return (
+            <div className="tv-custom-display">
+              {customContent.type === 'file' ? (
+                <div className="custom-file">
+                  <h2>Custom Content</h2>
+                  {/* In a real app, you would render the file based on its type */}
+                  <div className="custom-file-placeholder">
+                    <div className="custom-file-icon">📄</div>
+                    <div className="custom-file-name">{customContent.name}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="custom-embed" 
+                  dangerouslySetInnerHTML={{ __html: customContent.content }} 
+                />
+              )}
+            </div>
+          );
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+  
   return (
     <div className="tv-page">
       <div className="tv-page-header">
         <h1>📺 Television 1</h1>
-        <p className="tv-description">Manage notifications for TV 1</p>
+        <p className="tv-description">Dynamic Content Display</p>
       </div>
       
-      
+      <div className="tv-content-display">
+        {renderContent()}
+        
+        <div className="content-indicator">
+          <div className={`indicator-dot ${contentIndex === 0 ? 'active' : ''}`}></div>
+          <div className={`indicator-dot ${contentIndex === 1 ? 'active' : ''}`}></div>
+          {customContent && <div className={`indicator-dot ${contentIndex === 2 ? 'active' : ''}`}></div>}
+        </div>
+      </div>
     </div>
   );
 }

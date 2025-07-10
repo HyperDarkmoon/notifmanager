@@ -7,12 +7,14 @@ import './styles/sidebar.css';
 import './styles/welcome.css';
 import './styles/tvpage.css';
 import './styles/auth.css';
+import './styles/admin.css';
 import TV1 from './tvpages/tv1';
 import TV2 from './tvpages/tv2';
 import TV3 from './tvpages/tv3';
 import TV4 from './tvpages/tv4';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import AdminPanel from './components/AdminPanel';
 
 // Component to handle navigation and layout
 function NavigationLayoutWithLogout({ onLogout }) {
@@ -108,19 +110,50 @@ function NavigationLayoutWithLogout({ onLogout }) {
   );
 }
 
+// Admin Panel Layout with navigation and logout
+function AdminPanelLayout({ onLogout }) {
+  return (
+    <div className="admin-layout">
+      <nav className="navbar">
+        <div className="navbar-content">
+          <img src={company} alt="Company Logo" className="company-logo" />
+          <h1 className="navbar-title">Admin Panel</h1>
+          <div className="navbar-actions">
+            <button className="logout-button" onClick={onLogout}>
+              Logout
+            </button>
+          </div>
+        </div>
+      </nav>
+      <main className="admin-main-content">
+        <AdminPanel />
+      </main>
+    </div>
+  );
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     // Check if user is already logged in
     const user = localStorage.getItem('user');
+    const storedRole = localStorage.getItem('userRole');
+    
     if (user) {
       setIsAuthenticated(true);
+      setUserRole(storedRole || 'USER');
     }
   }, []);
 
   const handleLogin = (success) => {
     setIsAuthenticated(success);
+    if (success) {
+      // Get user role after login
+      const storedRole = localStorage.getItem('userRole');
+      setUserRole(storedRole || 'USER');
+    }
   };
 
   const handleSignupSuccess = () => {
@@ -130,7 +163,18 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
     setIsAuthenticated(false);
+    setUserRole(null);
+  };
+
+  // Render the appropriate layout based on user role
+  const renderAuthenticatedContent = () => {
+    if (userRole === 'ADMIN') {
+      return <AdminPanelLayout onLogout={handleLogout} />;
+    } else {
+      return <NavigationLayoutWithLogout onLogout={handleLogout} />;
+    }
   };
 
   return (
@@ -143,7 +187,7 @@ function App() {
           isAuthenticated ? <Navigate to="/" /> : <Signup onSignupSuccess={handleSignupSuccess} />
         } />
         <Route path="*" element={
-          isAuthenticated ? <NavigationLayoutWithLogout onLogout={handleLogout} /> : <Navigate to="/login" />
+          isAuthenticated ? renderAuthenticatedContent() : <Navigate to="/login" />
         } />
       </Routes>
     </Router>

@@ -160,6 +160,164 @@
   transform: translateY(-1px);
 }
 
+/* TV Content Display */
+.tv-content-display {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  min-height: 400px;
+}
+
+/* Info Display (Temperature, Pressure, Time) */
+.tv-info-display {
+  padding: 3rem;
+}
+
+.tv-info-display h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #2d3748;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.info-icon {
+  font-size: 2.5rem;
+  margin-right: 1.5rem;
+}
+
+.info-data h3 {
+  margin: 0 0 0.5rem 0;
+  color: #4a5568;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.info-value {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Message Display */
+.tv-message-display {
+  padding: 3rem;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-content {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.message-icon {
+  font-size: 4rem;
+  margin-bottom: 2rem;
+  color: #667eea;
+}
+
+.message-text {
+  font-size: 2.5rem;
+  line-height: 1.4;
+  font-weight: 300;
+  color: #2d3748;
+}
+
+/* Custom Content Display */
+.tv-custom-display {
+  padding: 3rem;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-file {
+  text-align: center;
+}
+
+.custom-file h2 {
+  margin-bottom: 2rem;
+  color: #2d3748;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.custom-file-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.custom-file-icon {
+  font-size: 4rem;
+  color: #667eea;
+}
+
+.custom-file-name {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.custom-embed {
+  max-width: 100%;
+  overflow: auto;
+}
+
+/* Content Indicators */
+.content-indicator {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.indicator-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5e0;
+  transition: all 0.3s ease;
+}
+
+.indicator-dot.active {
+  background: #667eea;
+  transform: scale(1.2);
+}
+
 /* Responsive design for TV pages */
 @media (max-width: 768px) {
   .tv-content {
