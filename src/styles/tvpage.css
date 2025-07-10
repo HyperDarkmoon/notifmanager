@@ -1,8 +1,27 @@
+:root {
+  --sidebar-width: 240px;
+}
+
 /* TV Page Styles */
 .tv-page {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 0;
+  width: calc(100% - var(--sidebar-width));
+  height: calc(100vh - 72px); /* Account for navbar height */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 72px; /* Navbar height */
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 0;
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+/* When sidebar is closed, expand to full width */
+.sidebar.closed ~ .tv-page {
+  left: 0;
+  width: 100%;
 }
 
 .tv-page-header {
@@ -163,83 +182,92 @@
 /* TV Content Display */
 .tv-content-display {
   background: white;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   position: relative;
-  min-height: 400px;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
 }
 
 /* Info Display (Temperature, Pressure, Time) */
 .tv-info-display {
-  padding: 3rem;
+  padding: 2rem;
+  height: 100%;
+  background: linear-gradient(135deg, #f0f4f8 0%, #d8e1f3 100%);
 }
 
 .tv-info-display h2 {
   text-align: center;
   margin-bottom: 2rem;
   color: #2d3748;
-  font-size: 1.8rem;
+  font-size: 2.5rem;
   font-weight: 600;
 }
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 2rem;
+  height: calc(100% - 100px);
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  background: white;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  height: 100%;
 }
 
 .info-icon {
-  font-size: 2.5rem;
-  margin-right: 1.5rem;
+  font-size: 3.5rem;
+  margin-right: 2rem;
 }
 
 .info-data h3 {
   margin: 0 0 0.5rem 0;
   color: #4a5568;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   font-weight: 600;
 }
 
 .info-value {
   margin: 0;
   color: #2d3748;
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
 }
 
 /* Message Display */
 .tv-message-display {
-  padding: 3rem;
-  min-height: 400px;
+  padding: 2rem;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 .message-content {
   text-align: center;
-  max-width: 800px;
+  max-width: 90%;
   margin: 0 auto;
 }
 
 .message-icon {
-  font-size: 4rem;
-  margin-bottom: 2rem;
+  font-size: 6rem;
+  margin-bottom: 3rem;
   color: #667eea;
 }
 
 .message-text {
-  font-size: 2.5rem;
+  font-size: 4rem;
   line-height: 1.4;
   font-weight: 300;
   color: #2d3748;
@@ -247,8 +275,9 @@
 
 /* Custom Content Display */
 .tv-custom-display {
-  padding: 3rem;
-  min-height: 400px;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -287,35 +316,118 @@
   font-size: 1.2rem;
   font-weight: 500;
   color: #2d3748;
+  margin-top: 1rem;
+}
+
+.custom-file-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.custom-content-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
 }
 
 .custom-embed {
-  max-width: 100%;
+  width: 100%;
+  height: 100%;
   overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Multi-image layouts */
+.custom-file-image-grid {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+/* Single image takes full space */
+.custom-file-image-grid.grid-1 {
+  grid-template-columns: 1fr;
+}
+
+/* Two images side by side */
+.custom-file-image-grid.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Four images in a 2x2 grid */
+.custom-file-image-grid.grid-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.custom-file-image-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.custom-file {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: center;
+}
+
+.custom-file h2 {
+  padding: 1rem 0;
+  margin: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+
+.tv-custom-display {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  padding: 0;
+  margin: 0;
 }
 
 /* Content Indicators */
 .content-indicator {
   position: absolute;
-  bottom: 1.5rem;
+  bottom: 1rem;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
   gap: 1rem;
+  z-index: 10;
 }
 
 .indicator-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #cbd5e0;
+  background: rgba(255, 255, 255, 0.7);
   transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .indicator-dot.active {
   background: #667eea;
-  transform: scale(1.2);
+  transform: scale(1.3);
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.6);
 }
 
 /* Responsive design for TV pages */

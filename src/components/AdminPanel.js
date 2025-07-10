@@ -61,10 +61,22 @@ function AdminPanel() {
   };
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles && selectedFiles.length > 0) {
+      // Only allow 1, 2, or 4 images
+      const validCount = [1, 2, 4];
+      const fileCount = Math.min(selectedFiles.length, 4);
+      
+      // If we don't have a valid count, adjust to the nearest valid count
+      const adjustedCount = validCount.includes(fileCount) ? fileCount : 
+                           (fileCount === 3 ? 4 : 1);
+      
+      const filesToUse = selectedFiles.slice(0, adjustedCount);
+      
+      setFile(filesToUse);
+      setFileName(filesToUse.length === 1 ? 
+                 filesToUse[0].name : 
+                 `${filesToUse.length} images selected`);
     }
   };
 
@@ -116,19 +128,85 @@ function AdminPanel() {
       // For development, we'll store content in localStorage to be accessed by TV components
       const tvUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
       
-      tvUploads[selectedTV] = contentType === 'file' 
-        ? { type: 'file', name: fileName, timestamp: new Date().toISOString() } 
-        : { type: 'embed', content: embedText, timestamp: new Date().toISOString() };
+      if (contentType === 'file') {
+        // Handle multiple files
+        if (Array.isArray(file)) {
+          if (file.length === 1) {
+            // Single file handling
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target.result;
+              
+              tvUploads[selectedTV] = { 
+                type: 'file', 
+                name: file[0].name, 
+                dataUrl: dataUrl,
+                timestamp: new Date().toISOString() 
+              };
+              
+              localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
+              
+              // Update the current uploads display
+              setCurrentUploads(prev => ({
+                ...prev,
+                [selectedTV]: tvUploads[selectedTV]
+              }));
+              
+              setMessage(`Content for TV ${selectedTV} has been updated successfully!`);
+            };
+            reader.readAsDataURL(file[0]);
+          } else {
+            // Multiple files handling
+            Promise.all(file.map(f => {
+              return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  resolve({
+                    name: f.name,
+                    dataUrl: event.target.result
+                  });
+                };
+                reader.readAsDataURL(f);
+              });
+            })).then(images => {
+              tvUploads[selectedTV] = { 
+                type: 'file', 
+                images: images,
+                timestamp: new Date().toISOString() 
+              };
+              
+              localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
+              
+              // Update the current uploads display
+              setCurrentUploads(prev => ({
+                ...prev,
+                [selectedTV]: tvUploads[selectedTV]
+              }));
+              
+              setMessage(`${images.length} images for TV ${selectedTV} have been updated successfully!`);
+            });
+          }
+        }
+      } else {
+        tvUploads[selectedTV] = { 
+          type: 'embed', 
+          content: embedText, 
+          timestamp: new Date().toISOString() 
+        };
         
-      localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
+        localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
+        
+        // Update the current uploads display
+        setCurrentUploads(prev => ({
+          ...prev,
+          [selectedTV]: tvUploads[selectedTV]
+        }));
+        
+        setMessage(`Content for TV ${selectedTV} has been updated successfully!`);
+      }
       
-      // Update the current uploads display
-      setCurrentUploads(prev => ({
-        ...prev,
-        [selectedTV]: tvUploads[selectedTV]
-      }));
-
-      setMessage(`Content for TV ${selectedTV} has been updated successfully!`);
+      // We've moved this code into the conditional blocks above to handle
+      // the async nature of the FileReader when dealing with files
       
       // Reset form
       if (contentType === 'file') {
@@ -230,10 +308,11 @@ function AdminPanel() {
                       type="file" 
                       className="file-input" 
                       onChange={handleFileChange} 
-                      accept="image/*,video/*,application/pdf" 
+                      accept="image/*" 
+                      multiple
                     />
                   </label>
-                  <p className="upload-help">Supported formats: Images, Videos, PDFs</p>
+                  <p className="upload-help">Supported formats: Images (JPG, PNG, GIF). You can select 1, 2, or 4 images.</p>
                 </div>
               )}
 
@@ -280,8 +359,38 @@ function AdminPanel() {
                   {currentUploads[tv] ? (
                     currentUploads[tv].type === 'file' ? (
                       <div className="upload-file-info">
-                        <span className="file-type-icon">📄</span>
-                        <span className="file-name">{currentUploads[tv].name}</span>
+                        {currentUploads[tv].images ? (
+                          // Multiple images
+                          <div className="upload-multi-images">
+                            <div className="multi-image-preview">
+                              {currentUploads[tv].images.slice(0, 2).map((img, idx) => (
+                                <img 
+                                  key={idx}
+                                  src={img.dataUrl} 
+                                  alt={img.name} 
+                                  className="upload-file-thumbnail" 
+                                />
+                              ))}
+                            </div>
+                            <span className="file-name">{currentUploads[tv].images.length} images</span>
+                          </div>
+                        ) : currentUploads[tv].name && currentUploads[tv].name.match(/\.(jpeg|jpg|gif|png)$/i) && currentUploads[tv].dataUrl ? (
+                          // Single image
+                          <>
+                            <img 
+                              src={currentUploads[tv].dataUrl} 
+                              alt={currentUploads[tv].name} 
+                              className="upload-file-thumbnail" 
+                            />
+                            <span className="file-name">{currentUploads[tv].name}</span>
+                          </>
+                        ) : (
+                          // Other file type
+                          <>
+                            <span className="file-type-icon">📄</span>
+                            <span className="file-name">{currentUploads[tv].name}</span>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="upload-embed-info">

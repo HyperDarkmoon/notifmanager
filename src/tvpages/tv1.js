@@ -179,12 +179,38 @@ function TV1() {
             <div className="tv-custom-display">
               {customContent.type === 'file' ? (
                 <div className="custom-file">
-                  <h2>Custom Content</h2>
-                  {/* In a real app, you would render the file based on its type */}
-                  <div className="custom-file-placeholder">
-                    <div className="custom-file-icon">📄</div>
-                    <div className="custom-file-name">{customContent.name}</div>
-                  </div>
+                  {/* Check if it's a single image or multiple images */}
+                  {Array.isArray(customContent.images) ? (
+                    // Multiple images display
+                    <div className={`custom-file-image-grid grid-${customContent.images.length}`}>
+                      {customContent.images.map((image, index) => (
+                        <div key={index} className="custom-file-image-container">
+                          <img 
+                            src={image.dataUrl} 
+                            alt={image.name} 
+                            className="custom-content-image" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    // Single image or file display
+                    customContent.name && customContent.name.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                      <div className="custom-file-image-grid grid-1">
+                        <div className="custom-file-image-container">
+                          <img 
+                            src={customContent.dataUrl} 
+                            alt={customContent.name} 
+                            className="custom-content-image" 
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="custom-file-placeholder">
+                        <div className="custom-file-icon">📄</div>
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="custom-embed" 
@@ -202,10 +228,6 @@ function TV1() {
   
   return (
     <div className="tv-page">
-      <div className="tv-page-header">
-        <h1>📺 Television 1</h1>
-        <p className="tv-description">Dynamic Content Display</p>
-      </div>
       
       <div className="tv-content-display">
         {renderContent()}
