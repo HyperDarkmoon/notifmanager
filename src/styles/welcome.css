@@ -1,0 +1,94 @@
+/* Welcome Screen Styles */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.welcome-section h1 {
+  color: #495057;
+  margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 300;
+}
+
+.welcome-section p {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.selected-tv-display h2 {
+  color: #495057;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.tv-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border: 1px solid #e9ecef;
+}
+
+.tv-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.tv-info h3 {
+  color: #495057;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.tv-info p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* TV Grid for welcome page */
+.tv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.tv-card-preview {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e6ed;
+}
+
+.tv-card-preview:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.tv-card-preview .tv-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.tv-card-preview h3 {
+  color: #2d3748;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.tv-card-preview p {
+  color: #718096;
+  margin: 0;
+  font-size: 1rem;
+}

@@ -1,0 +1,89 @@
+/* Sidebar Styles */
+.sidebar {
+  width: var(--sidebar-width);
+  background: #f8f9fa;
+  border-right: 1px solid #e9ecef;
+  padding: 2rem 1rem;
+  min-height: calc(100vh - 72px);
+  position: fixed;
+  left: 0;
+  top: 72px;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  z-index: 100;
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-title {
+  margin: 0 0 1.5rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tv-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tv-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  text-align: left;
+  width: 100%;
+}
+
+.tv-menu-item:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.tv-menu-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.tv-menu-icon {
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sidebar {
+    position: relative;
+    width: 100%;
+    min-height: auto;
+    top: 0;
+  }
+  
+  .tv-menu {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  
+  .tv-menu-item {
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+}

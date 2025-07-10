@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import company from '../imgs/company.png';
+import '../styles/auth.css';
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');

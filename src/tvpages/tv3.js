@@ -1,4 +1,5 @@
 import React from 'react';
+import '../styles/tvpage.css';
 
 function TV3() {
   return (

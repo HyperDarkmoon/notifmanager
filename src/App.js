@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import company from './imgs/company.png';
-import './App.css';
+import './styles/base.css';
+import './styles/navbar.css';
+import './styles/sidebar.css';
+import './styles/welcome.css';
+import './styles/tvpage.css';
+import './styles/auth.css';
 import TV1 from './tvpages/tv1';
 import TV2 from './tvpages/tv2';
 import TV3 from './tvpages/tv3';
