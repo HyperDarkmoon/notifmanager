@@ -16,7 +16,7 @@
   background: transparent;
 }
 
-html, body {
+html:not(.admin-mode), body:not(.admin-view) {
   overflow: hidden;
   height: 100%;
 }

@@ -121,6 +121,15 @@ function NavigationLayoutWithLogout({ onLogout }) {
 
 // Admin Panel Layout with navigation and logout
 function AdminPanelLayout({ onLogout }) {
+  // Force layout recalculation to ensure admin panel displays correctly
+  useEffect(() => {
+    // Add small delay to let DOM update
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
   return (
     <div className="admin-layout">
       <nav className="navbar">
@@ -180,8 +189,15 @@ function App() {
   // Render the appropriate layout based on user role
   const renderAuthenticatedContent = () => {
     if (userRole === 'ADMIN') {
+      // Add admin-view class to body for admin-specific styles
+      document.body.classList.add('admin-view');
+      document.body.classList.remove('sidebar-closed');
+      document.documentElement.classList.add('admin-mode');
       return <AdminPanelLayout onLogout={handleLogout} />;
     } else {
+      // Remove admin-view class when not in admin mode
+      document.body.classList.remove('admin-view');
+      document.documentElement.classList.remove('admin-mode');
       return <NavigationLayoutWithLogout onLogout={handleLogout} />;
     }
   };
