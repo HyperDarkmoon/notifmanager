@@ -1,416 +1,581 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/admin.css';
+import { 
+  formatScheduleDate,
+  getMaxFilesForContentType 
+} from '../utils/contentScheduleUtils';
 
 function AdminPanel() {
-  const [selectedTV, setSelectedTV] = useState(1);
-  const [contentType, setContentType] = useState('file'); // 'file' or 'embed'
-  const [embedText, setEmbedText] = useState('');
-  const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
-  const [isError, setIsError] = useState(false);
-  const [currentUploads, setCurrentUploads] = useState({
-    1: null,
-    2: null,
-    3: null,
-    4: null
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    contentType: 'TEXT',
+    content: '',
+    imageUrls: [],
+    startTime: '',
+    endTime: '',
+    targetTVs: [],
+    active: true
   });
 
-  // Load current uploads for each TV
+  // UI state
+  const [submissionMessage, setSubmissionMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]);
+
+  // TV options based on TVEnum
+  const tvOptions = [
+    { value: 'TV1', label: 'TV 1', icon: '📺' },
+    { value: 'TV2', label: 'TV 2', icon: '📺' },
+    { value: 'TV3', label: 'TV 3', icon: '📺' },
+    { value: 'TV4', label: 'TV 4', icon: '📺' }
+  ];
+
+  // Content type options
+  const contentTypes = [
+    { value: 'TEXT', label: 'Text Content', icon: '📝' },
+    { value: 'IMAGE_SINGLE', label: 'Single Image', icon: '🖼️' },
+    { value: 'IMAGE_DUAL', label: 'Dual Images', icon: '🖼️🖼️' },
+    { value: 'IMAGE_QUAD', label: 'Quad Images', icon: '🖼️🖼️🖼️🖼️' },
+    { value: 'EMBED', label: 'Embed Content', icon: '🌐' }
+  ];
+
+  // Fetch existing schedules on component mount
   useEffect(() => {
-    fetchCurrentUploads();
-  }, []);
+    fetchSchedules();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchCurrentUploads = async () => {
+  // API helper function
+  const makeAuthenticatedRequest = async (url, options = {}) => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      throw new Error('No user authentication found');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`,
+      ...options.headers
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    return response;
+  };
+
+  // Fetch all schedules
+  const fetchSchedules = async () => {
+    setIsLoading(true);
     try {
-      // This would be replaced with an actual API call to your backend
-      // For now, we'll just simulate it
-      console.log('Fetching current uploads from server...');
-      
-      // Get uploads from localStorage for development
-      const tvUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
-      
-      // Update the state with the uploads
-      setCurrentUploads(prevState => ({
-        1: tvUploads['1'] || null,
-        2: tvUploads['2'] || null,
-        3: tvUploads['3'] || null,
-        4: tvUploads['4'] || null
-      }));
-      
-      // In production, this would be:
-      // const response = await fetch('http://localhost:8090/api/admin/uploads');
-      // const data = await response.json();
-      // setCurrentUploads(data);
+      const response = await makeAuthenticatedRequest('http://localhost:8090/api/content/all');
+      const data = await response.json();
+      setSchedules(data);
     } catch (error) {
-      console.error('Error fetching current uploads:', error);
+      console.error('Error fetching schedules:', error);
+      setSubmissionMessage(`Error fetching schedules: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleTVSelect = (tv) => {
-    setSelectedTV(tv);
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
-  const handleContentTypeChange = (type) => {
-    setContentType(type);
-    // Reset fields
-    setEmbedText('');
-    setFile(null);
-    setFileName('');
+  // Handle TV selection
+  const handleTVSelection = (tvValue) => {
+    setFormData(prev => ({
+      ...prev,
+      targetTVs: prev.targetTVs.includes(tvValue)
+        ? prev.targetTVs.filter(tv => tv !== tvValue)
+        : [...prev.targetTVs, tvValue]
+    }));
   };
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles && selectedFiles.length > 0) {
-      // Only allow 1, 2, or 4 images
-      const validCount = [1, 2, 4];
-      const fileCount = Math.min(selectedFiles.length, 4);
-      
-      // If we don't have a valid count, adjust to the nearest valid count
-      const adjustedCount = validCount.includes(fileCount) ? fileCount : 
-                           (fileCount === 3 ? 4 : 1);
-      
-      const filesToUse = selectedFiles.slice(0, adjustedCount);
-      
-      setFile(filesToUse);
-      setFileName(filesToUse.length === 1 ? 
-                 filesToUse[0].name : 
-                 `${filesToUse.length} images selected`);
+  // Handle content type change
+  const handleContentTypeChange = (contentType) => {
+    setFormData(prev => ({
+      ...prev,
+      contentType,
+      content: '',
+      imageUrls: []
+    }));
+    setImageFiles([]);
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const maxFiles = getMaxFilesForContentType(formData.contentType);
+    
+    if (files.length > maxFiles) {
+      setSubmissionMessage(`Error: ${formData.contentType} allows maximum ${maxFiles} image(s)`);
+      return;
     }
+
+    setImageFiles(files);
+    
+    // Convert files to data URLs (for preview) and prepare for upload
+    const filePromises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(filePromises).then(dataUrls => {
+      setFormData(prev => ({
+        ...prev,
+        imageUrls: dataUrls
+      }));
+    });
   };
 
+  // Get maximum files allowed for content type
+  // Note: Using imported utility function
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setMessage('');
-    setIsError(false);
+    setSubmissionMessage('');
 
     try {
-      // Validate form
-      if (contentType === 'file' && !file) {
-        throw new Error('Please select a file to upload');
+      // Validate form data
+      if (!formData.title.trim()) {
+        throw new Error('Title is required');
       }
       
-      if (contentType === 'embed' && !embedText.trim()) {
-        throw new Error('Please enter embed text');
+      if (formData.targetTVs.length === 0) {
+        throw new Error('At least one TV must be selected');
       }
 
-      // Create form data for the upload
-      const formData = new FormData();
-      formData.append('tvId', selectedTV);
-      formData.append('contentType', contentType);
+      // Validate content based on content type
+      if (formData.contentType === 'TEXT' && !formData.content.trim()) {
+        throw new Error('Text content is required');
+      }
       
-      if (contentType === 'file') {
-        formData.append('file', file);
-      } else {
-        formData.append('embedText', embedText);
+      if (formData.contentType === 'EMBED' && !formData.content.trim()) {
+        throw new Error('Embed content is required');
       }
 
-      // This would be replaced with an actual API call to your backend
-      // For now, we'll just simulate it
-      console.log('Simulating upload to server...', {
-        tv: selectedTV,
-        contentType,
-        file: file ? file.name : null,
-        embedText: contentType === 'embed' ? embedText : null
+      if (formData.contentType.startsWith('IMAGE_')) {
+        const requiredImages = getMaxFilesForContentType(formData.contentType);
+        if (formData.imageUrls.length !== requiredImages) {
+          throw new Error(`${formData.contentType} requires exactly ${requiredImages} image(s)`);
+        }
+      }
+
+      // Validate date/time if provided
+      if (formData.startTime && formData.endTime) {
+        const startDate = new Date(formData.startTime);
+        const endDate = new Date(formData.endTime);
+        
+        if (startDate >= endDate) {
+          throw new Error('Start time must be before end time');
+        }
+      }
+
+      // Prepare submission data
+      const submissionData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        contentType: formData.contentType,
+        content: formData.content.trim(),
+        imageUrls: formData.imageUrls,
+        startTime: formData.startTime || null,
+        endTime: formData.endTime || null,
+        targetTVs: formData.targetTVs,
+        active: formData.active
+      };
+
+      // Submit to backend
+      const response = await makeAuthenticatedRequest('http://localhost:8090/api/content', {
+        method: 'POST',
+        body: JSON.stringify(submissionData)
       });
 
-      // Simulated successful response
-      // In a real app, you would do:
-      // const response = await fetch('http://localhost:8090/api/admin/upload', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // if (!response.ok) throw new Error('Upload failed');
-      // const data = await response.json();
+      await response.json();
       
-      // For development, we'll store content in localStorage to be accessed by TV components
-      const tvUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
-      
-      if (contentType === 'file') {
-        // Handle multiple files
-        if (Array.isArray(file)) {
-          if (file.length === 1) {
-            // Single file handling
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const dataUrl = event.target.result;
-              
-              tvUploads[selectedTV] = { 
-                type: 'file', 
-                name: file[0].name, 
-                dataUrl: dataUrl,
-                timestamp: new Date().toISOString() 
-              };
-              
-              localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
-              
-              // Update the current uploads display
-              setCurrentUploads(prev => ({
-                ...prev,
-                [selectedTV]: tvUploads[selectedTV]
-              }));
-              
-              setMessage(`Content for TV ${selectedTV} has been updated successfully!`);
-            };
-            reader.readAsDataURL(file[0]);
-          } else {
-            // Multiple files handling
-            Promise.all(file.map(f => {
-              return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  resolve({
-                    name: f.name,
-                    dataUrl: event.target.result
-                  });
-                };
-                reader.readAsDataURL(f);
-              });
-            })).then(images => {
-              tvUploads[selectedTV] = { 
-                type: 'file', 
-                images: images,
-                timestamp: new Date().toISOString() 
-              };
-              
-              localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
-              
-              // Update the current uploads display
-              setCurrentUploads(prev => ({
-                ...prev,
-                [selectedTV]: tvUploads[selectedTV]
-              }));
-              
-              setMessage(`${images.length} images for TV ${selectedTV} have been updated successfully!`);
-            });
-          }
-        }
-      } else {
-        tvUploads[selectedTV] = { 
-          type: 'embed', 
-          content: embedText, 
-          timestamp: new Date().toISOString() 
-        };
-        
-        localStorage.setItem('tvUploads', JSON.stringify(tvUploads));
-        
-        // Update the current uploads display
-        setCurrentUploads(prev => ({
-          ...prev,
-          [selectedTV]: tvUploads[selectedTV]
-        }));
-        
-        setMessage(`Content for TV ${selectedTV} has been updated successfully!`);
-      }
-      
-      // We've moved this code into the conditional blocks above to handle
-      // the async nature of the FileReader when dealing with files
+      setSubmissionMessage('Content schedule created successfully!');
       
       // Reset form
-      if (contentType === 'file') {
-        setFile(null);
-        setFileName('');
-      } else {
-        setEmbedText('');
-      }
+      setFormData({
+        title: '',
+        description: '',
+        contentType: 'TEXT',
+        content: '',
+        imageUrls: [],
+        startTime: '',
+        endTime: '',
+        targetTVs: [],
+        active: true
+      });
+      setImageFiles([]);
       
+      // Refresh schedules list
+      await fetchSchedules();
+
     } catch (error) {
-      console.error('Submission error:', error);
-      setMessage(error.message || 'Failed to update content');
-      setIsError(true);
+      console.error('Error submitting form:', error);
+      setSubmissionMessage(`Error: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Delete schedule
+  const handleDeleteSchedule = async (scheduleId) => {
+    if (!window.confirm('Are you sure you want to delete this schedule?')) {
+      return;
+    }
+
+    try {
+      await makeAuthenticatedRequest(`http://localhost:8090/api/content/${scheduleId}`, {
+        method: 'DELETE'
+      });
+      
+      setSubmissionMessage('Schedule deleted successfully!');
+      await fetchSchedules();
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      setSubmissionMessage(`Error deleting schedule: ${error.message}`);
+    }
+  };
+
+  // Toggle schedule active status
+  const handleToggleActive = async (schedule) => {
+    try {
+      const updatedSchedule = {
+        ...schedule,
+        active: !schedule.active
+      };
+
+      await makeAuthenticatedRequest(`http://localhost:8090/api/content/${schedule.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatedSchedule)
+      });
+      
+      setSubmissionMessage(`Schedule ${updatedSchedule.active ? 'activated' : 'deactivated'} successfully!`);
+      await fetchSchedules();
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      setSubmissionMessage(`Error updating schedule: ${error.message}`);
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    return formatScheduleDate(dateString);
+  };
+
   return (
     <div className="admin-panel">
-      <div className="admin-header">
-        <h1>TV Content Management Panel</h1>
-        <p className="admin-subtitle">Upload content or embed code for TVs</p>
-      </div>
+      <header className="admin-header">
+        <h1>Content Management</h1>
+        <p className="admin-subtitle">Schedule and manage content for TV displays</p>
+      </header>
 
       <div className="admin-content">
+        {/* Content Creation Form */}
         <div className="admin-form-container">
-          <form onSubmit={handleSubmit} className="admin-form">
+          <form className="admin-form" onSubmit={handleSubmit}>
+            {submissionMessage && (
+              <div className={`submission-message ${submissionMessage.startsWith('Error') ? 'error' : 'success'}`}>
+                {submissionMessage}
+              </div>
+            )}
+
+            {/* Basic Information */}
             <div className="form-section">
-              <h2>1. Select Target TV</h2>
+              <h2>Basic Information</h2>
+              
+              <div className="form-group">
+                <label className="form-label">Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  placeholder="Enter content title"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="form-textarea"
+                  placeholder="Enter content description (optional)"
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            {/* Target TVs */}
+            <div className="form-section">
+              <h2>Target TVs *</h2>
               <div className="tv-selector">
-                {[1, 2, 3, 4].map(tv => (
-                  <button 
-                    key={tv}
+                {tvOptions.map(tv => (
+                  <button
+                    key={tv.value}
                     type="button"
-                    className={`tv-select-btn ${selectedTV === tv ? 'selected' : ''}`}
-                    onClick={() => handleTVSelect(tv)}
+                    className={`tv-select-btn ${formData.targetTVs.includes(tv.value) ? 'selected' : ''}`}
+                    onClick={() => handleTVSelection(tv.value)}
                   >
-                    <span className="tv-icon">📺</span>
-                    <span>TV {tv}</span>
+                    <div className="tv-icon">{tv.icon}</div>
+                    <span>{tv.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* Content Type */}
             <div className="form-section">
-              <h2>2. Select Content Type</h2>
+              <h2>Content Type *</h2>
               <div className="content-type-selector">
-                <label className={`content-type-option ${contentType === 'file' ? 'selected' : ''}`}>
-                  <input 
-                    type="radio" 
-                    name="contentType" 
-                    value="file" 
-                    checked={contentType === 'file'} 
-                    onChange={() => handleContentTypeChange('file')} 
-                  />
-                  <span className="content-type-icon">📄</span>
-                  <span>Upload File</span>
-                </label>
-                
-                <label className={`content-type-option ${contentType === 'embed' ? 'selected' : ''}`}>
-                  <input 
-                    type="radio" 
-                    name="contentType" 
-                    value="embed" 
-                    checked={contentType === 'embed'} 
-                    onChange={() => handleContentTypeChange('embed')} 
-                  />
-                  <span className="content-type-icon">📝</span>
-                  <span>Embed Text</span>
-                </label>
+                {contentTypes.map(type => (
+                  <label
+                    key={type.value}
+                    className={`content-type-option ${formData.contentType === type.value ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="contentType"
+                      value={type.value}
+                      checked={formData.contentType === type.value}
+                      onChange={() => handleContentTypeChange(type.value)}
+                    />
+                    <div className="content-type-icon">{type.icon}</div>
+                    <span>{type.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
+            {/* Content Input */}
             <div className="form-section">
-              <h2>3. Add Content</h2>
+              <h2>Content *</h2>
               
-              {contentType === 'file' && (
+              {formData.contentType === 'TEXT' && (
+                <div className="form-group">
+                  <label className="form-label">Text Content</label>
+                  <textarea
+                    name="content"
+                    value={formData.content}
+                    onChange={handleInputChange}
+                    className="form-textarea"
+                    placeholder="Enter your text content here..."
+                    rows="4"
+                    required
+                  />
+                </div>
+              )}
+
+              {formData.contentType === 'EMBED' && (
+                <div className="form-group">
+                  <label className="form-label">Embed HTML/Code</label>
+                  <textarea
+                    name="content"
+                    value={formData.content}
+                    onChange={handleInputChange}
+                    className="embed-textarea"
+                    placeholder="Enter HTML, iframe, or other embed code..."
+                    rows="6"
+                    required
+                  />
+                </div>
+              )}
+
+              {formData.contentType.startsWith('IMAGE_') && (
                 <div className="file-upload-container">
                   <label className="file-upload-label">
-                    {fileName ? (
-                      <div className="selected-file">
-                        <span className="file-name">{fileName}</span>
-                        <button 
-                          type="button" 
-                          className="remove-file-btn"
-                          onClick={() => { setFile(null); setFileName(''); }}
-                        >
-                          ✖
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="upload-icon">📤</span>
-                        <span>Select File</span>
-                      </>
-                    )}
-                    <input 
-                      type="file" 
-                      className="file-input" 
-                      onChange={handleFileChange} 
-                      accept="image/*" 
-                      multiple
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple={formData.contentType !== 'IMAGE_SINGLE'}
+                      onChange={handleFileUpload}
+                      className="file-input"
                     />
+                    <div className="upload-icon">📁</div>
+                    <div>
+                      <strong>Choose Images</strong>
+                      <div className="upload-help">
+                        {formData.contentType === 'IMAGE_SINGLE' && 'Select 1 image'}
+                        {formData.contentType === 'IMAGE_DUAL' && 'Select 2 images'}
+                        {formData.contentType === 'IMAGE_QUAD' && 'Select 4 images'}
+                      </div>
+                    </div>
                   </label>
-                  <p className="upload-help">Supported formats: Images (JPG, PNG, GIF). You can select 1, 2, or 4 images.</p>
-                </div>
-              )}
-
-              {contentType === 'embed' && (
-                <div className="embed-container">
-                  <label htmlFor="embedText" className="form-label">Embed Code/Text</label>
-                  <textarea 
-                    id="embedText"
-                    className="embed-textarea"
-                    value={embedText}
-                    onChange={(e) => setEmbedText(e.target.value)}
-                    placeholder="Enter HTML embed code or text content..."
-                    rows={8}
-                  ></textarea>
+                  
+                  {imageFiles.length > 0 && (
+                    <div className="selected-files">
+                      {imageFiles.map((file, index) => (
+                        <div key={index} className="selected-file">
+                          <span className="file-name">{file.name}</span>
+                          {formData.imageUrls[index] && (
+                            <img 
+                              src={formData.imageUrls[index]} 
+                              alt={file.name}
+                              className="upload-file-thumbnail"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {message && (
-              <div className={`submission-message ${isError ? 'error' : 'success'}`}>
-                {message}
-              </div>
-            )}
+            {/* Schedule */}
+            <div className="form-section">
+              <h2>Schedule (Optional)</h2>
+              <p className="form-help">Leave empty for immediate and indefinite display</p>
+              
+              <div className="schedule-inputs">
+                <div className="form-group">
+                  <label className="form-label">Start Time</label>
+                  <input
+                    type="datetime-local"
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    className="form-input"
+                  />
+                </div>
 
+                <div className="form-group">
+                  <label className="form-label">End Time</label>
+                  <input
+                    type="datetime-local"
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="active"
+                    checked={formData.active}
+                    onChange={handleInputChange}
+                  />
+                  <span>Active (content will be displayed)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <div className="form-actions">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="admin-submit-btn"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Updating...' : 'Update TV Content'}
+                {isSubmitting ? 'Creating Schedule...' : 'Create Content Schedule'}
               </button>
             </div>
           </form>
         </div>
 
+        {/* Existing Schedules */}
         <div className="current-uploads-section">
-          <h2>Current TV Contents</h2>
-          <div className="uploads-grid">
-            {[1, 2, 3, 4].map(tv => (
-              <div key={tv} className="tv-upload-card">
-                <h3>TV {tv}</h3>
-                <div className="upload-content">
-                  {currentUploads[tv] ? (
-                    currentUploads[tv].type === 'file' ? (
-                      <div className="upload-file-info">
-                        {currentUploads[tv].images ? (
-                          // Multiple images
-                          <div className="upload-multi-images">
-                            <div className="multi-image-preview">
-                              {currentUploads[tv].images.slice(0, 2).map((img, idx) => (
-                                <img 
-                                  key={idx}
-                                  src={img.dataUrl} 
-                                  alt={img.name} 
-                                  className="upload-file-thumbnail" 
-                                />
-                              ))}
-                            </div>
-                            <span className="file-name">{currentUploads[tv].images.length} images</span>
-                          </div>
-                        ) : currentUploads[tv].name && currentUploads[tv].name.match(/\.(jpeg|jpg|gif|png)$/i) && currentUploads[tv].dataUrl ? (
-                          // Single image
-                          <>
-                            <img 
-                              src={currentUploads[tv].dataUrl} 
-                              alt={currentUploads[tv].name} 
-                              className="upload-file-thumbnail" 
-                            />
-                            <span className="file-name">{currentUploads[tv].name}</span>
-                          </>
-                        ) : (
-                          // Other file type
-                          <>
-                            <span className="file-type-icon">📄</span>
-                            <span className="file-name">{currentUploads[tv].name}</span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="upload-embed-info">
-                        <span className="embed-type-icon">📝</span>
-                        <span className="embed-preview">
-                          {currentUploads[tv].content.substring(0, 50)}
-                          {currentUploads[tv].content.length > 50 ? '...' : ''}
-                        </span>
-                      </div>
-                    )
-                  ) : (
-                    <div className="no-content">
-                      <span className="empty-icon">🚫</span>
-                      <span>No custom content</span>
+          <h2>Existing Content Schedules</h2>
+          
+          {isLoading ? (
+            <div className="loading-message">Loading schedules...</div>
+          ) : schedules.length === 0 ? (
+            <div className="no-content">
+              <div className="empty-icon">📋</div>
+              <span>No content schedules found</span>
+            </div>
+          ) : (
+            <div className="schedules-list">
+              {schedules.map(schedule => (
+                <div key={schedule.id} className={`schedule-card ${!schedule.active ? 'inactive' : ''}`}>
+                  <div className="schedule-header">
+                    <h3>{schedule.title}</h3>
+                    <div className="schedule-actions">
+                      <button
+                        className={`toggle-btn ${schedule.active ? 'active' : 'inactive'}`}
+                        onClick={() => handleToggleActive(schedule)}
+                        title={schedule.active ? 'Deactivate' : 'Activate'}
+                      >
+                        {schedule.active ? '🟢' : '🔴'}
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDeleteSchedule(schedule.id)}
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
                     </div>
-                  )}
+                  </div>
+                  
+                  <div className="schedule-details">
+                    <p><strong>Type:</strong> {schedule.contentType}</p>
+                    <p><strong>TVs:</strong> {schedule.targetTVs.join(', ')}</p>
+                    <p><strong>Start:</strong> {formatDate(schedule.startTime)}</p>
+                    <p><strong>End:</strong> {formatDate(schedule.endTime)}</p>
+                    
+                    {schedule.description && (
+                      <p><strong>Description:</strong> {schedule.description}</p>
+                    )}
+                    
+                    {schedule.contentType === 'TEXT' && schedule.content && (
+                      <div className="content-preview">
+                        <strong>Content:</strong>
+                        <div className="text-preview">{schedule.content}</div>
+                      </div>
+                    )}
+                    
+                    {schedule.contentType.startsWith('IMAGE_') && schedule.imageUrls && (
+                      <div className="content-preview">
+                        <strong>Images:</strong>
+                        <div className="image-preview">
+                          {schedule.imageUrls.map((url, index) => (
+                            <img 
+                              key={index}
+                              src={url} 
+                              alt={`Content ${index + 1}`}
+                              className="preview-thumbnail"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

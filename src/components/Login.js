@@ -60,8 +60,12 @@ function Login({ onLogin }) {
       
       // Store user info in local storage or context
       if (data && data.user) {
-        // Store both user data and role
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Store both user data and role with password for API authentication
+        const userWithAuth = {
+          ...data.user,
+          password: password // Store password for API authentication
+        };
+        localStorage.setItem('user', JSON.stringify(userWithAuth));
         
         // For development testing with static test account
         if (username === 'admin' && password === 'admin') {

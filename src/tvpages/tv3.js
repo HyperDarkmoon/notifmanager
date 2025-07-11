@@ -46,36 +46,95 @@ function TV3() {
   
   // Fetch custom content for this TV
   useEffect(() => {
-    // In a real application, you would fetch this from your backend
-    // For now, we'll just use localStorage as a simulation
     const fetchCustomContent = async () => {
       try {
-        // Simulated API call
-        // const response = await fetch(`http://localhost:8090/api/tv/3/content`);
-        // const data = await response.json();
-        // if (data && data.content) {
-        //   setCustomContent(data.content);
-        // }
+        // Fetch active schedules for TV3 from the backend
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) return;
         
-        // For now, check localStorage as a simulation
+        const response = await fetch('http://localhost:8090/api/content/tv/TV3', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`
+          }
+        });
+        
+        if (response.ok) {
+          const schedules = await response.json();
+          
+          // Filter active schedules (currently running or no time constraints)
+          const now = new Date();
+          const activeSchedules = schedules.filter(schedule => {
+            if (!schedule.active) return false;
+            
+            // If no start/end time, it's always active
+            if (!schedule.startTime && !schedule.endTime) return true;
+            
+            // Check if current time is within the schedule window
+            const start = schedule.startTime ? new Date(schedule.startTime) : null;
+            const end = schedule.endTime ? new Date(schedule.endTime) : null;
+            
+            if (start && now < start) return false;
+            if (end && now > end) return false;
+            
+            return true;
+          });
+          
+          // Use the first active schedule
+          const activeSchedule = activeSchedules.length > 0 ? activeSchedules[0] : null;
+          
+          console.log(`TV3 - Active schedules:`, activeSchedules);
+          
+          // Compare with previous content to see if it changed
+          const prevContentStr = JSON.stringify(prevContentRef.current);
+          const newContentStr = JSON.stringify(activeSchedule);
+          
+          if (prevContentStr !== newContentStr) {
+            console.log(`TV3 - Content changed, updating state`);
+            setCustomContent(activeSchedule || null);
+            prevContentRef.current = activeSchedule;
+          }
+        } else {
+          console.error('Failed to fetch content for TV3');
+          setCustomContent(null);
+        }
+        
+        // Fallback to localStorage for development
         const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
         const tv3Content = currentUploads['3'];
         
-        // Log the content we're checking with more details
-        console.log(`TV3 - Checking for content:`, tv3Content);
-        
-        // Compare with previous content to see if it changed
-        const prevContentStr = JSON.stringify(prevContentRef.current);
-        const newContentStr = JSON.stringify(tv3Content);
-        
-        if (prevContentStr !== newContentStr) {
-          console.log(`TV3 - Content changed, updating state`);
-          setCustomContent(tv3Content || null);
-          prevContentRef.current = tv3Content;
+        if (tv3Content && !response.ok) {
+          console.log(`TV3 - Using localStorage fallback:`, tv3Content);
+          
+          // Compare with previous content to see if it changed
+          const prevContentStr = JSON.stringify(prevContentRef.current);
+          const newContentStr = JSON.stringify(tv3Content);
+          
+          if (prevContentStr !== newContentStr) {
+            console.log(`TV3 - LocalStorage content changed, updating state`);
+            setCustomContent(tv3Content || null);
+            prevContentRef.current = tv3Content;
+          }
         }
       } catch (error) {
         console.error('Error fetching custom content:', error);
-        setCustomContent(null);
+        
+        // Fallback to localStorage
+        const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
+        const tv3Content = currentUploads['3'];
+        
+        if (tv3Content) {
+          console.log(`TV3 - Using localStorage fallback due to error:`, tv3Content);
+          const prevContentStr = JSON.stringify(prevContentRef.current);
+          const newContentStr = JSON.stringify(tv3Content);
+          
+          if (prevContentStr !== newContentStr) {
+            setCustomContent(tv3Content || null);
+            prevContentRef.current = tv3Content;
+          }
+        } else {
+          setCustomContent(null);
+        }
       }
     };
     
@@ -177,9 +236,38 @@ function TV3() {
         if (customContent) {
           return (
             <div className="tv-custom-display">
-              {customContent.type === 'file' ? (
+              {/* Handle new backend content schedule format */}
+              {customContent.contentType && customContent.contentType.startsWith('IMAGE_') ? (
                 <div className="custom-file">
-                  {/* Check if it's a single image or multiple images */}
+                  {/* Handle different image content types */}
+                  {customContent.imageUrls && customContent.imageUrls.length > 0 ? (
+                    <div className={`custom-file-image-grid grid-${customContent.imageUrls.length}`}>
+                      {customContent.imageUrls.map((url, index) => (
+                        <div key={index} className="custom-file-image-container">
+                          <img 
+                            src={url} 
+                            alt={`Content ${index + 1}`} 
+                            className="custom-content-image" 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : customContent.contentType === 'EMBED' ? (
+                <div className="custom-embed" 
+                  dangerouslySetInnerHTML={{ __html: customContent.content }} 
+                />
+              ) : customContent.contentType === 'TEXT' ? (
+                <div className="custom-text">
+                  <div className="text-content">
+                    <h2>{customContent.title}</h2>
+                    <p>{customContent.content}</p>
+                  </div>
+                </div>
+              ) : customContent.type === 'file' ? (
+                // Legacy localStorage format support
+                <div className="custom-file">
                   {Array.isArray(customContent.images) ? (
                     // Multiple images display
                     <div className={`custom-file-image-grid grid-${customContent.images.length}`}>
@@ -213,11 +301,12 @@ function TV3() {
                     )
                   )}
                 </div>
-              ) : (
+              ) : customContent.type === 'embed' ? (
+                // Legacy localStorage format support
                 <div className="custom-embed" 
                   dangerouslySetInnerHTML={{ __html: customContent.content }} 
                 />
-              )}
+              ) : null}
             </div>
           );
         }
