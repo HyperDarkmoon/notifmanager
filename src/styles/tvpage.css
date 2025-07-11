@@ -364,11 +364,13 @@ body.sidebar-closed .tv-page {
 .custom-content-image {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Changed from cover to contain for better display */
+  object-fit: cover;
   border-radius: 0;
   box-shadow: none;
   margin: 0;
-  display: block; /* Ensure proper display */
+  padding: 0;
+  border: none;
+  display: block;
   max-height: 100%;
 }
 
@@ -384,7 +386,7 @@ body.sidebar-closed .tv-page {
 /* Multi-image layouts */
 .custom-file-image-grid {
   display: grid;
-  gap: 4px;
+  gap: 0;
   width: 100%;
   height: 100%;
   flex: 1;
@@ -414,6 +416,21 @@ body.sidebar-closed .tv-page {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.custom-file-image-container .custom-content-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: block;
 }
 
 .custom-file {
