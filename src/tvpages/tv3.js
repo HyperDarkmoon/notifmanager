@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/tvpage.css';
+import { debugAuthenticatedApiCall } from '../utils/authenticatedApi';
 
 function TV3() {
   const [contentIndex, setContentIndex] = useState(0);
@@ -49,19 +50,13 @@ function TV3() {
     const fetchCustomContent = async () => {
       try {
         // Fetch active schedules for TV3 from the backend
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user) return;
+        console.log('TV3 - Attempting to fetch content from backend');
         
-        const response = await fetch('http://localhost:8090/api/content/tv/TV3', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`
-          }
+        const schedules = await debugAuthenticatedApiCall('http://localhost:8090/api/content/tv/TV3', {
+          method: 'GET'
         });
         
-        if (response.ok) {
-          const schedules = await response.json();
-          
+        if (schedules) {
           // Filter active schedules (currently running or no time constraints)
           const now = new Date();
           const activeSchedules = schedules.filter(schedule => {
@@ -103,7 +98,7 @@ function TV3() {
         const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
         const tv3Content = currentUploads['3'];
         
-        if (tv3Content && !response.ok) {
+        if (tv3Content && !schedules) {
           console.log(`TV3 - Using localStorage fallback:`, tv3Content);
           
           // Compare with previous content to see if it changed

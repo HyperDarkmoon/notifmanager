@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/tvpage.css';
+import { debugAuthenticatedApiCall } from '../utils/authenticatedApi';
 
 function TV1() {
   const [contentIndex, setContentIndex] = useState(0);
@@ -49,19 +50,13 @@ function TV1() {
     const fetchCustomContent = async () => {
       try {
         // Fetch active schedules for TV1 from the backend
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user) return;
+        console.log('TV1 - Attempting to fetch content from backend');
         
-        const response = await fetch('http://localhost:8090/api/content/tv/TV1', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`
-          }
+        const schedules = await debugAuthenticatedApiCall('http://localhost:8090/api/content/tv/TV1', {
+          method: 'GET'
         });
         
-        if (response.ok) {
-          const schedules = await response.json();
-          
+        if (schedules) {
           // Filter active schedules (currently running or no time constraints)
           const now = new Date();
           const activeSchedules = schedules.filter(schedule => {
@@ -95,7 +90,7 @@ function TV1() {
             prevContentRef.current = activeSchedule;
           }
         } else {
-          console.error('Failed to fetch content for TV1');
+          console.log('TV1 - No schedules returned from backend');
           setCustomContent(null);
         }
         
@@ -103,7 +98,7 @@ function TV1() {
         const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
         const tv1Content = currentUploads['1'];
         
-        if (tv1Content && !response.ok) {
+        if (tv1Content && !schedules) {
           console.log(`TV1 - Using localStorage fallback:`, tv1Content);
           
           // Compare with previous content to see if it changed

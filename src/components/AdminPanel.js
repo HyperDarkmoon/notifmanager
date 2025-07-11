@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/admin.css';
+import { makeAuthenticatedRequest } from '../utils/authenticatedApi';
 import { 
   formatScheduleDate,
   getMaxFilesForContentType 
@@ -47,32 +48,6 @@ function AdminPanel() {
   useEffect(() => {
     fetchSchedules();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // API helper function
-  const makeAuthenticatedRequest = async (url, options = {}) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) {
-      throw new Error('No user authentication found');
-    }
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`,
-      ...options.headers
-    };
-
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    return response;
-  };
 
   // Fetch all schedules
   const fetchSchedules = async () => {

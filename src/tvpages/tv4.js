@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/tvpage.css';
+import { debugAuthenticatedApiCall } from '../utils/authenticatedApi';
 
 function TV4() {
   const [contentIndex, setContentIndex] = useState(0);
@@ -49,30 +50,29 @@ function TV4() {
     const fetchCustomContent = async () => {
       try {
         // Fetch active schedules for TV4 from the backend
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user) return;
+        console.log('TV4 - Attempting to fetch content from backend');
         
-        const response = await fetch('http://localhost:8090/api/content/tv/TV4', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`
-          }
+        const schedules = await debugAuthenticatedApiCall('http://localhost:8090/api/content/tv/TV4', {
+          method: 'GET'
         });
         
-        if (response.ok) {
-          const schedules = await response.json();
-          
+        if (schedules) {
           // Filter active schedules (currently running or no time constraints)
           const now = new Date();
           const activeSchedules = schedules.filter(schedule => {
-            const hasTimeConstraints = schedule.startTime && schedule.endTime;
-            if (!hasTimeConstraints) {
-              return schedule.active; // Show if active and no time constraints
-            }
+            if (!schedule.active) return false;
             
-            const startTime = new Date(schedule.startTime);
-            const endTime = new Date(schedule.endTime);
-            return schedule.active && now >= startTime && now <= endTime;
+            // If no start/end time, it's always active
+            if (!schedule.startTime && !schedule.endTime) return true;
+            
+            // Check if current time is within the schedule window
+            const start = schedule.startTime ? new Date(schedule.startTime) : null;
+            const end = schedule.endTime ? new Date(schedule.endTime) : null;
+            
+            if (start && now < start) return false;
+            if (end && now > end) return false;
+            
+            return true;
           });
           
           // Use the first active schedule
@@ -98,7 +98,7 @@ function TV4() {
         const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
         const tv4Content = currentUploads['4'];
         
-        if (tv4Content && !response.ok) {
+        if (tv4Content && !schedules) {
           console.log(`TV4 - Using localStorage fallback:`, tv4Content);
           
           // Compare with previous content to see if it changed
