@@ -489,6 +489,8 @@ body.sidebar-closed .tv-page {
   display: flex;
   justify-content: center;
   align-items: center;
+  background: #000;
+  position: relative;
 }
 
 .custom-video-container {
@@ -498,16 +500,16 @@ body.sidebar-closed .tv-page {
   justify-content: center;
   align-items: center;
   position: relative;
+  background: #000;
 }
 
 .custom-content-video {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0;
+  box-shadow: none;
+  background: #000;
 }
 
 /* Ensure video fills container appropriately on smaller screens */

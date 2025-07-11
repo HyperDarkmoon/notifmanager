@@ -19,6 +19,8 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const prevContentRef = useRef(null);
   const rotationIntervalRef = useRef(null);
+  const isVideoPlayingRef = useRef(false);
+  const videoEndTimeoutRef = useRef(null);
 
   // Environmental data simulation and time updates
   useEffect(() => {
@@ -58,43 +60,97 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     
     console.log(`${tvId} - Content count: ${contentCount}, Custom content present: ${Boolean(customContent)}`);
     
-    setContentIndex(0);
-    
-    // Clear any existing interval
+    // Clear any existing interval and timeout
     if (rotationIntervalRef.current) {
       clearInterval(rotationIntervalRef.current);
+    }
+    if (videoEndTimeoutRef.current) {
+      clearTimeout(videoEndTimeoutRef.current);
+    }
+    
+    // Check if we have video content
+    const hasVideoContent = customContent && (
+      customContent.contentType === 'VIDEO' || 
+      (customContent.type === 'file' && customContent.videos && customContent.videos.length > 0) ||
+      (customContent.type === 'file' && customContent.name && customContent.name.match(/\.(mp4|webm|ogg|avi|mov)$/i))
+    );
+    
+    // If we have video content and we're not already on it, navigate to it
+    if (hasVideoContent) {
+      setContentIndex(2);
+    } else {
+      // No video content, start normal rotation
+      setContentIndex(0);
     }
     
     const startRotation = () => {
       rotationIntervalRef.current = setInterval(() => {
-        if (!isVideoPlaying) {
+        if (!isVideoPlayingRef.current) {
           setContentIndex(prevIndex => {
             const nextIndex = (prevIndex + 1) % contentCount;
             console.log(`${tvId} - Rotating content: ${prevIndex} -> ${nextIndex}, Content types: ${contentCount}`);
             return nextIndex;
           });
+        } else {
+          console.log(`${tvId} - Video is playing, skipping rotation`);
         }
       }, ROTATION_PERIOD);
     };
 
-    startRotation();
+    // Start rotation unless we just navigated to video content
+    if (!hasVideoContent) {
+      startRotation();
+    }
 
     return () => {
       if (rotationIntervalRef.current) {
         clearInterval(rotationIntervalRef.current);
       }
+      if (videoEndTimeoutRef.current) {
+        clearTimeout(videoEndTimeoutRef.current);
+      }
     };
-  }, [customContent, tvId, isVideoPlaying]);
+  }, [customContent, tvId]);
+
+  // Handle video playing state changes
+  useEffect(() => {
+    if (isVideoPlaying) {
+      // Video started, stop rotation
+      if (rotationIntervalRef.current) {
+        clearInterval(rotationIntervalRef.current);
+        console.log(`${tvId} - Stopped rotation because video is playing`);
+      }
+    }
+  }, [isVideoPlaying, tvId]);
 
   // Helper functions for video control
   const handleVideoStart = () => {
     console.log(`${tvId} - Video started playing, pausing rotation`);
     setIsVideoPlaying(true);
+    isVideoPlayingRef.current = true;
+    
+    // Clear any pending video end timeout
+    if (videoEndTimeoutRef.current) {
+      clearTimeout(videoEndTimeoutRef.current);
+    }
   };
 
   const handleVideoEnd = () => {
-    console.log(`${tvId} - Video ended, resuming rotation`);
+    console.log(`${tvId} - Video ended, will resume rotation in 1 second`);
     setIsVideoPlaying(false);
+    isVideoPlayingRef.current = false;
+    
+    // Add a 1-second delay before allowing rotation to continue
+    videoEndTimeoutRef.current = setTimeout(() => {
+      console.log(`${tvId} - Video end delay completed, rotation can continue`);
+      // Force a rotation to the next slide
+      setContentIndex(prevIndex => {
+        const contentCount = customContent ? 3 : 2;
+        const nextIndex = (prevIndex + 1) % contentCount;
+        console.log(`${tvId} - Moving to next slide after video: ${prevIndex} -> ${nextIndex}`);
+        return nextIndex;
+      });
+    }, 1000);
   };
 
   return {

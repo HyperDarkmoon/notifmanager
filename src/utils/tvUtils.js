@@ -198,13 +198,14 @@ export const renderCustomDisplay = (customContent, onVideoStart, onVideoEnd) => 
                 src={customContent.videoUrls[0]} 
                 className="custom-content-video"
                 autoPlay
-                muted
+                playsInline
                 onPlay={onVideoStart}
                 onEnded={onVideoEnd}
                 onError={(e) => {
                   console.error('Video playback error:', e);
                   if (onVideoEnd) onVideoEnd();
                 }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
           ) : null}
@@ -243,13 +244,14 @@ export const renderCustomDisplay = (customContent, onVideoStart, onVideoEnd) => 
                 src={customContent.videos[0].dataUrl} 
                 className="custom-content-video"
                 autoPlay
-                muted
+                playsInline
                 onPlay={onVideoStart}
                 onEnded={onVideoEnd}
                 onError={(e) => {
                   console.error('Video playback error:', e);
                   if (onVideoEnd) onVideoEnd();
                 }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
           ) : (
@@ -270,13 +272,14 @@ export const renderCustomDisplay = (customContent, onVideoStart, onVideoEnd) => 
                   src={customContent.dataUrl} 
                   className="custom-content-video"
                   autoPlay
-                  muted
+                  playsInline
                   onPlay={onVideoStart}
                   onEnded={onVideoEnd}
                   onError={(e) => {
                     console.error('Video playback error:', e);
                     if (onVideoEnd) onVideoEnd();
                   }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
             ) : (
