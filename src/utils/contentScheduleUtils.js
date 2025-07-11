@@ -5,6 +5,7 @@ export const CONTENT_TYPES = {
   IMAGE_SINGLE: 'IMAGE_SINGLE',
   IMAGE_DUAL: 'IMAGE_DUAL',
   IMAGE_QUAD: 'IMAGE_QUAD',
+  VIDEO: 'VIDEO',
   EMBED: 'EMBED'
 };
 
@@ -20,6 +21,7 @@ export const getMaxFilesForContentType = (contentType) => {
     case CONTENT_TYPES.IMAGE_SINGLE: return 1;
     case CONTENT_TYPES.IMAGE_DUAL: return 2;
     case CONTENT_TYPES.IMAGE_QUAD: return 4;
+    case CONTENT_TYPES.VIDEO: return 1;
     default: return 0;
   }
 };
@@ -47,6 +49,12 @@ export const validateSchedule = (formData) => {
     const requiredImages = getMaxFilesForContentType(formData.contentType);
     if (formData.imageUrls.length !== requiredImages) {
       errors.push(`${formData.contentType} requires exactly ${requiredImages} image(s)`);
+    }
+  }
+  
+  if (formData.contentType === CONTENT_TYPES.VIDEO) {
+    if (formData.videoUrls.length !== 1) {
+      errors.push('Video content requires exactly 1 video file');
     }
   }
   

@@ -15,11 +15,14 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
     pressure,
     randomText,
     customContent,
-    currentTime
+    currentTime,
+    isVideoPlaying,
+    handleVideoStart,
+    handleVideoEnd
   } = useTVLogic(tvId, initialTemperature, initialPressure);
 
   const renderContent = () => {
-    console.log(`${tvId} - Rendering content index: ${contentIndex}, Has custom content: ${Boolean(customContent)}`);
+    console.log(`${tvId} - Rendering content index: ${contentIndex}, Has custom content: ${Boolean(customContent)}, Video playing: ${isVideoPlaying}`);
     
     // If we don't have custom content and index would be 2, show index 0 instead
     const effectiveIndex = !customContent && contentIndex === 2 ? 0 : contentIndex;
@@ -30,7 +33,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
       case 1:
         return renderMessageDisplay(randomText);
       case 2:
-        return renderCustomDisplay(customContent);
+        return renderCustomDisplay(customContent, handleVideoStart, handleVideoEnd);
       default:
         return null;
     }

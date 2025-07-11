@@ -14,6 +14,7 @@ function AdminPanel() {
     contentType: 'TEXT',
     content: '',
     imageUrls: [],
+    videoUrls: [],
     startTime: '',
     endTime: '',
     targetTVs: [],
@@ -26,6 +27,7 @@ function AdminPanel() {
   const [schedules, setSchedules] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
+  const [videoFiles, setVideoFiles] = useState([]);
 
   // TV options based on TVEnum
   const tvOptions = [
@@ -41,6 +43,7 @@ function AdminPanel() {
     { value: 'IMAGE_SINGLE', label: 'Single Image', icon: '🖼️' },
     { value: 'IMAGE_DUAL', label: 'Dual Images', icon: '🖼️🖼️' },
     { value: 'IMAGE_QUAD', label: 'Quad Images', icon: '🖼️🖼️🖼️🖼️' },
+    { value: 'VIDEO', label: 'Video Content', icon: '🎥' },
     { value: 'EMBED', label: 'Embed Content', icon: '🌐' }
   ];
 
@@ -89,9 +92,11 @@ function AdminPanel() {
       ...prev,
       contentType,
       content: '',
-      imageUrls: []
+      imageUrls: [],
+      videoUrls: []
     }));
     setImageFiles([]);
+    setVideoFiles([]);
   };
 
   // Handle file upload
@@ -119,6 +124,34 @@ function AdminPanel() {
       setFormData(prev => ({
         ...prev,
         imageUrls: dataUrls
+      }));
+    });
+  };
+
+  // Handle video file upload
+  const handleVideoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    
+    if (files.length > 1) {
+      setSubmissionMessage('Error: Only one video file is allowed');
+      return;
+    }
+
+    setVideoFiles(files);
+    
+    // Convert files to data URLs (for preview) and prepare for upload
+    const filePromises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(filePromises).then(dataUrls => {
+      setFormData(prev => ({
+        ...prev,
+        videoUrls: dataUrls
       }));
     });
   };
@@ -158,6 +191,12 @@ function AdminPanel() {
         }
       }
 
+      if (formData.contentType === 'VIDEO') {
+        if (formData.videoUrls.length !== 1) {
+          throw new Error('Video content requires exactly 1 video file');
+        }
+      }
+
       // Validate date/time if provided
       if (formData.startTime && formData.endTime) {
         const startDate = new Date(formData.startTime);
@@ -175,6 +214,7 @@ function AdminPanel() {
         contentType: formData.contentType,
         content: formData.content.trim(),
         imageUrls: formData.imageUrls,
+        videoUrls: formData.videoUrls,
         startTime: formData.startTime || null,
         endTime: formData.endTime || null,
         targetTVs: formData.targetTVs,
@@ -198,12 +238,14 @@ function AdminPanel() {
         contentType: 'TEXT',
         content: '',
         imageUrls: [],
+        videoUrls: [],
         startTime: '',
         endTime: '',
         targetTVs: [],
         active: true
       });
       setImageFiles([]);
+      setVideoFiles([]);
       
       // Refresh schedules list
       await fetchSchedules();
@@ -422,6 +464,44 @@ function AdminPanel() {
                   )}
                 </div>
               )}
+
+              {formData.contentType === 'VIDEO' && (
+                <div className="file-upload-container">
+                  <label className="file-upload-label">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoUpload}
+                      className="file-input"
+                    />
+                    <div className="upload-icon">🎥</div>
+                    <div>
+                      <strong>Choose Video</strong>
+                      <div className="upload-help">
+                        Select 1 video file (MP4, WebM, OGG)
+                      </div>
+                    </div>
+                  </label>
+                  
+                  {videoFiles.length > 0 && (
+                    <div className="selected-files">
+                      {videoFiles.map((file, index) => (
+                        <div key={index} className="selected-file">
+                          <span className="file-name">{file.name}</span>
+                          {formData.videoUrls[index] && (
+                            <video 
+                              src={formData.videoUrls[index]} 
+                              className="upload-file-thumbnail"
+                              controls
+                              style={{ maxWidth: '200px', maxHeight: '150px' }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Schedule */}
@@ -541,6 +621,23 @@ function AdminPanel() {
                               src={url} 
                               alt={`Content ${index + 1}`}
                               className="preview-thumbnail"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {schedule.contentType === 'VIDEO' && schedule.videoUrls && (
+                      <div className="content-preview">
+                        <strong>Videos:</strong>
+                        <div className="video-preview">
+                          {schedule.videoUrls.map((url, index) => (
+                            <video 
+                              key={index}
+                              src={url} 
+                              className="preview-thumbnail"
+                              controls
+                              style={{ maxWidth: '200px', maxHeight: '150px' }}
                             />
                           ))}
                         </div>

@@ -16,7 +16,9 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [randomText, setRandomText] = useState('');
   const [customContent, setCustomContent] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const prevContentRef = useRef(null);
+  const rotationIntervalRef = useRef(null);
 
   // Environmental data simulation and time updates
   useEffect(() => {
@@ -58,16 +60,42 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     
     setContentIndex(0);
     
-    const interval = setInterval(() => {
-      setContentIndex(prevIndex => {
-        const nextIndex = (prevIndex + 1) % contentCount;
-        console.log(`${tvId} - Rotating content: ${prevIndex} -> ${nextIndex}, Content types: ${contentCount}`);
-        return nextIndex;
-      });
-    }, ROTATION_PERIOD);
+    // Clear any existing interval
+    if (rotationIntervalRef.current) {
+      clearInterval(rotationIntervalRef.current);
+    }
+    
+    const startRotation = () => {
+      rotationIntervalRef.current = setInterval(() => {
+        if (!isVideoPlaying) {
+          setContentIndex(prevIndex => {
+            const nextIndex = (prevIndex + 1) % contentCount;
+            console.log(`${tvId} - Rotating content: ${prevIndex} -> ${nextIndex}, Content types: ${contentCount}`);
+            return nextIndex;
+          });
+        }
+      }, ROTATION_PERIOD);
+    };
 
-    return () => clearInterval(interval);
-  }, [customContent, tvId]);
+    startRotation();
+
+    return () => {
+      if (rotationIntervalRef.current) {
+        clearInterval(rotationIntervalRef.current);
+      }
+    };
+  }, [customContent, tvId, isVideoPlaying]);
+
+  // Helper functions for video control
+  const handleVideoStart = () => {
+    console.log(`${tvId} - Video started playing, pausing rotation`);
+    setIsVideoPlaying(true);
+  };
+
+  const handleVideoEnd = () => {
+    console.log(`${tvId} - Video ended, resuming rotation`);
+    setIsVideoPlaying(false);
+  };
 
   return {
     contentIndex,
@@ -75,6 +103,9 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     pressure,
     randomText,
     customContent,
-    currentTime
+    currentTime,
+    isVideoPlaying,
+    handleVideoStart,
+    handleVideoEnd
   };
 };

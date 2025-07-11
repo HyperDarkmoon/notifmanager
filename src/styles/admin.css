@@ -3,8 +3,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  overflow-y: auto; /* Enable scrolling */
-  box-sizing: border-box; /* Include padding in size calculations */
+  overflow-y: auto;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .admin-header {
@@ -66,9 +67,10 @@
 
 /* TV Selector */
 .tv-selector {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 1rem;
-  flex-wrap: wrap;
+  max-width: 500px;
 }
 
 .tv-select-btn {
@@ -106,8 +108,9 @@
 
 /* Content Type Selector */
 .content-type-selector {
-  display: flex;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 
@@ -119,8 +122,10 @@
   border-radius: 12px;
   border: 2px solid #e2e8f0;
   cursor: pointer;
-  flex: 1;
   transition: all 0.3s ease;
+  min-width: 0; /* Allow shrinking */
+  justify-content: center;
+  text-align: center;
 }
 
 .content-type-option input[type="radio"] {
@@ -364,22 +369,42 @@
 
 /* Admin Layout */
 .admin-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto; /* Enable scrolling for the admin layout */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  overflow: hidden;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.admin-layout .navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+  box-sizing: border-box;
 }
 
 .admin-main-content {
-  padding-top: 72px; /* Same as navbar height */
-  flex: 1;
+  position: absolute;
+  top: 72px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: calc(100vh - 72px);
-  overflow-y: auto; /* Enable scrolling */
-  position: relative; /* Create stacking context */
-  z-index: 1; /* Ensure it's above any potential sidebar */
-  height: 100%;
-  max-height: none;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Image Thumbnail */
@@ -580,12 +605,17 @@
 }
 
 @media (max-width: 767px) {
+  .admin-panel {
+    padding: 1rem;
+  }
+  
   .tv-selector {
-    justify-content: center;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: none;
   }
   
   .content-type-selector {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   
   .admin-form-container,
@@ -614,64 +644,92 @@
   .schedule-actions {
     align-self: flex-end;
   }
+
+  .admin-header h1 {
+    font-size: 2rem;
+  }
+
+  .admin-subtitle {
+    font-size: 1rem;
+  }
 }
 
-/* Fix for sidebar outline and scrolling in admin panel */
-.admin-layout {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
 
-.admin-layout .navbar {
-  position: fixed;
-  width: 100%;
-  z-index: 1000;
-}
 
 /* Reset the global no-scroll styles for admin panel */
 body.admin-view {
-  overflow-y: auto;
+  overflow: hidden !important;
+  height: 100vh;
 }
 
-/* Override any sidebar styles that might affect admin panel */
+html.admin-mode {
+  overflow: hidden !important;
+  height: 100vh;
+}
+
+/* Hide sidebar completely in admin mode */
 body.admin-view .sidebar {
-  display: none;
+  display: none !important;
+  visibility: hidden !important;
 }
 
-html.admin-mode, body.admin-mode {
-  overflow-y: auto;
-  height: auto;
+/* Ensure no sidebar-related margins or paddings affect admin layout */
+body.admin-view .main-content {
+  display: none !important;
+}
+
+/* Override any TV page styles that might interfere */
+body.admin-view .tv-page {
+  display: none !important;
+}
+
+/* Override base.css styles that add sidebar margins */
+body.admin-view .App {
+  padding-top: 0 !important;
+  margin-left: 0 !important;
+  --sidebar-width: 0px !important;
+  --main-margin-left: 0px !important;
+}
+
+body.admin-view main {
+  margin-left: 0 !important;
+}
+
+/* Ensure admin layout takes full width without sidebar interference */
+.admin-layout {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Override any CSS variables that might affect layout */
+body.admin-view {
+  --sidebar-width: 0px !important;
+  --main-margin-left: 0px !important;
 }
 
 /* Restore scrollbars for admin panel */
-.admin-view ::-webkit-scrollbar,
-.admin-layout ::-webkit-scrollbar {
+.admin-view .admin-layout ::-webkit-scrollbar,
+.admin-main-content ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
   background: #f1f1f1;
   display: block;
 }
 
-.admin-view ::-webkit-scrollbar-thumb,
-.admin-layout ::-webkit-scrollbar-thumb {
+.admin-view .admin-layout ::-webkit-scrollbar-thumb,
+.admin-main-content ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
-.admin-view ::-webkit-scrollbar-thumb:hover,
-.admin-layout ::-webkit-scrollbar-thumb:hover {
+.admin-view .admin-layout ::-webkit-scrollbar-thumb:hover,
+.admin-main-content ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 
-/* Ensure content fits properly */
-.admin-layout .admin-main-content,
+/* Ensure admin content fits properly */
 .admin-layout .admin-panel {
   max-height: none;
   height: auto;
+  min-height: calc(100vh - 72px - 4rem); /* Full height minus navbar and padding */
 }

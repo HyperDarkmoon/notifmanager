@@ -167,7 +167,7 @@ export const renderMessageDisplay = (randomText) => (
   </div>
 );
 
-export const renderCustomDisplay = (customContent) => {
+export const renderCustomDisplay = (customContent, onVideoStart, onVideoEnd) => {
   if (!customContent) return null;
 
   return (
@@ -187,6 +187,25 @@ export const renderCustomDisplay = (customContent) => {
                   />
                 </div>
               ))}
+            </div>
+          ) : null}
+        </div>
+      ) : customContent.contentType === 'VIDEO' ? (
+        <div className="custom-video">
+          {customContent.videoUrls && customContent.videoUrls.length > 0 ? (
+            <div className="custom-video-container">
+              <video 
+                src={customContent.videoUrls[0]} 
+                className="custom-content-video"
+                autoPlay
+                muted
+                onPlay={onVideoStart}
+                onEnded={onVideoEnd}
+                onError={(e) => {
+                  console.error('Video playback error:', e);
+                  if (onVideoEnd) onVideoEnd();
+                }}
+              />
             </div>
           ) : null}
         </div>
@@ -217,6 +236,22 @@ export const renderCustomDisplay = (customContent) => {
                 </div>
               ))}
             </div>
+          ) : customContent.videos && Array.isArray(customContent.videos) ? (
+            // Multiple videos display (show first one)
+            <div className="custom-video-container">
+              <video 
+                src={customContent.videos[0].dataUrl} 
+                className="custom-content-video"
+                autoPlay
+                muted
+                onPlay={onVideoStart}
+                onEnded={onVideoEnd}
+                onError={(e) => {
+                  console.error('Video playback error:', e);
+                  if (onVideoEnd) onVideoEnd();
+                }}
+              />
+            </div>
           ) : (
             // Single image or file display
             customContent.name && customContent.name.match(/\.(jpeg|jpg|gif|png)$/i) ? (
@@ -228,6 +263,21 @@ export const renderCustomDisplay = (customContent) => {
                     className="custom-content-image" 
                   />
                 </div>
+              </div>
+            ) : customContent.name && customContent.name.match(/\.(mp4|webm|ogg|avi|mov)$/i) ? (
+              <div className="custom-video-container">
+                <video 
+                  src={customContent.dataUrl} 
+                  className="custom-content-video"
+                  autoPlay
+                  muted
+                  onPlay={onVideoStart}
+                  onEnded={onVideoEnd}
+                  onError={(e) => {
+                    console.error('Video playback error:', e);
+                    if (onVideoEnd) onVideoEnd();
+                  }}
+                />
               </div>
             ) : (
               <div className="custom-file-placeholder">
