@@ -110,6 +110,8 @@ src/
 
 ## 🔌 Backend Integration
 
+You can find the backend repository [here](https://github.com/HyperDarkmoon/notificationbackend).
+
 This frontend connects to a Spring Boot backend with the following endpoints:
 
 ### Authentication Endpoints
@@ -274,4 +276,3 @@ For support and questions:
 
 ---
 
-**Built with ❤️ using React and modern web technologies**
