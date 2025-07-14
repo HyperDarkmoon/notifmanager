@@ -7,6 +7,17 @@ import {
 } from '../utils/contentScheduleUtils';
 
 function AdminPanel() {
+  // Get current datetime in the format required for datetime-local input
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -15,8 +26,8 @@ function AdminPanel() {
     content: '',
     imageUrls: [],
     videoUrls: [],
-    startTime: '',
-    endTime: '',
+    startTime: getCurrentDateTime(),
+    endTime: getCurrentDateTime(),
     targetTVs: [],
     active: true
   });
@@ -87,7 +98,24 @@ function AdminPanel() {
     }));
   };
 
-  // Handle content type change
+  // Handle clearing schedule for immediate content
+  const handleClearSchedule = () => {
+    setFormData(prev => ({
+      ...prev,
+      startTime: '',
+      endTime: ''
+    }));
+  };
+
+  // Handle setting current time for schedule
+  const handleSetCurrentTime = () => {
+    const currentTime = getCurrentDateTime();
+    setFormData(prev => ({
+      ...prev,
+      startTime: currentTime,
+      endTime: currentTime
+    }));
+  };
   const handleContentTypeChange = (contentType) => {
     setFormData(prev => ({
       ...prev,
@@ -198,7 +226,11 @@ function AdminPanel() {
         }
       }
 
-      // Validate date/time if provided
+      // Validate date/time if provided - both must be provided or both must be empty
+      if ((formData.startTime && !formData.endTime) || (!formData.startTime && formData.endTime)) {
+        throw new Error('Both start time and end time must be provided, or both must be empty for immediate/indefinite content');
+      }
+      
       if (formData.startTime && formData.endTime) {
         const startDate = new Date(formData.startTime);
         const endDate = new Date(formData.endTime);
@@ -240,8 +272,8 @@ function AdminPanel() {
         content: '',
         imageUrls: [],
         videoUrls: [],
-        startTime: '',
-        endTime: '',
+        startTime: getCurrentDateTime(),
+        endTime: getCurrentDateTime(),
         targetTVs: [],
         active: true
       });
@@ -529,9 +561,32 @@ function AdminPanel() {
             {/* Schedule */}
             <div className="form-section">
               <h2>Schedule (Optional)</h2>
-              <p className="form-help">Leave empty for immediate and indefinite display</p>
+              <p className="form-help">
+                Leave both times empty for immediate and indefinite display, or set both times for scheduled content.
+                <br />
+                <strong>Note:</strong> Scheduled content will temporarily override immediate content during its time window.
+              </p>
               
               <div className="schedule-inputs">
+                <div className="schedule-buttons">
+                  <button
+                    type="button"
+                    className="schedule-helper-btn clear"
+                    onClick={handleClearSchedule}
+                    title="Clear schedule for immediate content"
+                  >
+                    📅❌ Immediate Content
+                  </button>
+                  <button
+                    type="button"
+                    className="schedule-helper-btn current"
+                    onClick={handleSetCurrentTime}
+                    title="Set current time as start point"
+                  >
+                    🕒 Use Current Time
+                  </button>
+                </div>
+                
                 <div className="form-group">
                   <label className="form-label">Start Time</label>
                   <input

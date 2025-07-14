@@ -35,7 +35,7 @@ export const simulateEnvironmentalData = (prevTemp, prevPressure) => {
 // Shared content fetching logic
 export const fetchCustomContent = async (tvId, prevContentRef, setCustomContent) => {
   try {
-    // Fetch active schedules for this TV from the backend
+    // Fetch prioritized active content for this TV from the backend
     console.log(`${tvId} - Attempting to fetch content from backend`);
     
     const schedules = await debugAuthenticatedApiCall(`http://localhost:8090/api/content/tv/${tvId}`, {
@@ -43,57 +43,11 @@ export const fetchCustomContent = async (tvId, prevContentRef, setCustomContent)
     });
     
     if (schedules && schedules.length > 0) {
-      // Backend now handles all override logic, so we just need to filter for active schedules
-      const now = new Date();
-      const activeSchedules = schedules.filter(schedule => {
-        if (!schedule.active) {
-          console.log(`${tvId} - Skipping inactive schedule: ${schedule.title}`);
-          return false;
-        }
-        
-        // If no start/end time, it's always active (immediate/indefinite content)
-        if (!schedule.startTime && !schedule.endTime) {
-          console.log(`${tvId} - Found immediate/indefinite active schedule: ${schedule.title}`);
-          return true;
-        }
-        
-        // Check if current time is within the schedule window
-        const start = schedule.startTime ? new Date(schedule.startTime) : null;
-        const end = schedule.endTime ? new Date(schedule.endTime) : null;
-        
-        if (start && now < start) {
-          console.log(`${tvId} - Schedule not yet started: ${schedule.title}, starts at ${start}`);
-          return false;
-        }
-        if (end && now > end) {
-          console.log(`${tvId} - Schedule expired: ${schedule.title}, ended at ${end}`);
-          return false;
-        }
-        
-        console.log(`${tvId} - Found active timed schedule: ${schedule.title}`);
-        return true;
-      });
+      // Backend returns schedules in priority order, so just take the first one
+      // The backend handles all scheduling logic, temporary disabling, and priority
+      const activeSchedule = schedules[0];
       
-      // Sort by priority: immediate content first, then by start time
-      activeSchedules.sort((a, b) => {
-        // Immediate/indefinite content (no start/end time) gets highest priority
-        const aImmediate = !a.startTime && !a.endTime;
-        const bImmediate = !b.startTime && !b.endTime;
-        
-        if (aImmediate && !bImmediate) return -1;
-        if (!aImmediate && bImmediate) return 1;
-        if (aImmediate && bImmediate) return 0;
-        
-        // For timed content, prioritize by start time (most recent first)
-        const aStart = new Date(a.startTime);
-        const bStart = new Date(b.startTime);
-        return bStart - aStart;
-      });
-      
-      // Use the highest priority active schedule
-      const activeSchedule = activeSchedules.length > 0 ? activeSchedules[0] : null;
-      
-      console.log(`${tvId} - Active schedules found: ${activeSchedules.length}, selected: ${activeSchedule ? activeSchedule.title : 'none'}`);
+      console.log(`${tvId} - Received ${schedules.length} schedule(s) from backend, using highest priority: ${activeSchedule ? activeSchedule.title : 'none'}`);
       
       // Compare with previous content to see if it changed
       const prevContentStr = JSON.stringify(prevContentRef.current);
