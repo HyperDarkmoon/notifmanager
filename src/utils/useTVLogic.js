@@ -68,20 +68,13 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       clearTimeout(videoEndTimeoutRef.current);
     }
     
-    // Check if we have video content
-    const hasVideoContent = customContent && (
-      customContent.contentType === 'VIDEO' || 
-      (customContent.type === 'file' && customContent.videos && customContent.videos.length > 0) ||
-      (customContent.type === 'file' && customContent.name && customContent.name.match(/\.(mp4|webm|ogg|avi|mov)$/i))
-    );
-    
-    // If we have video content and we're not already on it, navigate to it
-    if (hasVideoContent) {
-      setContentIndex(2);
-    } else {
-      // No video content, start normal rotation
-      setContentIndex(0);
-    }
+    // Reset to first slide when content changes, but preserve current index if still valid
+    setContentIndex(prevIndex => {
+      if (prevIndex >= contentCount) {
+        return 0; // Reset to first slide if current index is invalid
+      }
+      return prevIndex; // Keep current index if still valid
+    });
     
     const startRotation = () => {
       rotationIntervalRef.current = setInterval(() => {
@@ -97,10 +90,8 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       }, ROTATION_PERIOD);
     };
 
-    // Start rotation unless we just navigated to video content
-    if (!hasVideoContent) {
-      startRotation();
-    }
+    // Always start rotation
+    startRotation();
 
     return () => {
       if (rotationIntervalRef.current) {

@@ -1,7 +1,7 @@
 import { debugAuthenticatedApiCall } from './authenticatedApi';
 
 // Shared constants
-export const ROTATION_PERIOD = 10000; // 10 seconds per content type
+export const ROTATION_PERIOD = 5000; // 5 seconds per content type
 export const CONTENT_FETCH_INTERVAL = 5000; // Check every 5 seconds
 export const RANDOM_TEXT_INTERVAL = 30000; // New text every 30 seconds
 export const TIME_UPDATE_INTERVAL = 1000; // Update every second
@@ -42,60 +42,96 @@ export const fetchCustomContent = async (tvId, prevContentRef, setCustomContent)
       method: 'GET'
     });
     
-    if (schedules) {
-      // Filter active schedules (currently running or no time constraints)
+    if (schedules && schedules.length > 0) {
+      // Backend now handles all override logic, so we just need to filter for active schedules
       const now = new Date();
       const activeSchedules = schedules.filter(schedule => {
-        if (!schedule.active) return false;
+        if (!schedule.active) {
+          console.log(`${tvId} - Skipping inactive schedule: ${schedule.title}`);
+          return false;
+        }
         
-        // If no start/end time, it's always active
-        if (!schedule.startTime && !schedule.endTime) return true;
+        // If no start/end time, it's always active (immediate/indefinite content)
+        if (!schedule.startTime && !schedule.endTime) {
+          console.log(`${tvId} - Found immediate/indefinite active schedule: ${schedule.title}`);
+          return true;
+        }
         
         // Check if current time is within the schedule window
         const start = schedule.startTime ? new Date(schedule.startTime) : null;
         const end = schedule.endTime ? new Date(schedule.endTime) : null;
         
-        if (start && now < start) return false;
-        if (end && now > end) return false;
+        if (start && now < start) {
+          console.log(`${tvId} - Schedule not yet started: ${schedule.title}, starts at ${start}`);
+          return false;
+        }
+        if (end && now > end) {
+          console.log(`${tvId} - Schedule expired: ${schedule.title}, ended at ${end}`);
+          return false;
+        }
         
+        console.log(`${tvId} - Found active timed schedule: ${schedule.title}`);
         return true;
       });
       
-      // Use the first active schedule
+      // Sort by priority: immediate content first, then by start time
+      activeSchedules.sort((a, b) => {
+        // Immediate/indefinite content (no start/end time) gets highest priority
+        const aImmediate = !a.startTime && !a.endTime;
+        const bImmediate = !b.startTime && !b.endTime;
+        
+        if (aImmediate && !bImmediate) return -1;
+        if (!aImmediate && bImmediate) return 1;
+        if (aImmediate && bImmediate) return 0;
+        
+        // For timed content, prioritize by start time (most recent first)
+        const aStart = new Date(a.startTime);
+        const bStart = new Date(b.startTime);
+        return bStart - aStart;
+      });
+      
+      // Use the highest priority active schedule
       const activeSchedule = activeSchedules.length > 0 ? activeSchedules[0] : null;
       
-      console.log(`${tvId} - Active schedules:`, activeSchedules);
+      console.log(`${tvId} - Active schedules found: ${activeSchedules.length}, selected: ${activeSchedule ? activeSchedule.title : 'none'}`);
       
       // Compare with previous content to see if it changed
       const prevContentStr = JSON.stringify(prevContentRef.current);
       const newContentStr = JSON.stringify(activeSchedule);
       
       if (prevContentStr !== newContentStr) {
-        console.log(`${tvId} - Content changed, updating state`);
+        console.log(`${tvId} - Content changed, updating state from "${prevContentRef.current?.title || 'none'}" to "${activeSchedule?.title || 'none'}"`);
         setCustomContent(activeSchedule || null);
         prevContentRef.current = activeSchedule;
       }
     } else {
       console.log(`${tvId} - No schedules returned from backend`);
-      setCustomContent(null);
+      // Only clear content if we previously had content
+      if (prevContentRef.current !== null) {
+        console.log(`${tvId} - Clearing previous content`);
+        setCustomContent(null);
+        prevContentRef.current = null;
+      }
     }
     
-    // Fallback to localStorage for development
-    const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
-    const tvNumber = tvId.replace('TV', '');
-    const tvContent = currentUploads[tvNumber];
-    
-    if (tvContent && !schedules) {
-      console.log(`${tvId} - Using localStorage fallback:`, tvContent);
+    // Fallback to localStorage for development (only if backend returned no schedules)
+    if (!schedules || schedules.length === 0) {
+      const currentUploads = JSON.parse(localStorage.getItem('tvUploads') || '{}');
+      const tvNumber = tvId.replace('TV', '');
+      const tvContent = currentUploads[tvNumber];
       
-      // Compare with previous content to see if it changed
-      const prevContentStr = JSON.stringify(prevContentRef.current);
-      const newContentStr = JSON.stringify(tvContent);
-      
-      if (prevContentStr !== newContentStr) {
-        console.log(`${tvId} - LocalStorage content changed, updating state`);
-        setCustomContent(tvContent || null);
-        prevContentRef.current = tvContent;
+      if (tvContent) {
+        console.log(`${tvId} - Using localStorage fallback:`, tvContent);
+        
+        // Compare with previous content to see if it changed
+        const prevContentStr = JSON.stringify(prevContentRef.current);
+        const newContentStr = JSON.stringify(tvContent);
+        
+        if (prevContentStr !== newContentStr) {
+          console.log(`${tvId} - LocalStorage content changed, updating state`);
+          setCustomContent(tvContent || null);
+          prevContentRef.current = tvContent;
+        }
       }
     }
   } catch (error) {
