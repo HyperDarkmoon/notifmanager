@@ -28,6 +28,7 @@ function AdminPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [videoFiles, setVideoFiles] = useState([]);
+  const [selectedTVFilter, setSelectedTVFilter] = useState('all');
 
   // TV options based on TVEnum
   const tvOptions = [
@@ -279,6 +280,17 @@ function AdminPanel() {
 
   // Toggle schedule active status
   const handleToggleActive = async (schedule) => {
+    // If trying to activate content, check if it has expired
+    if (!schedule.active && schedule.endTime) {
+      const now = new Date();
+      const endTime = new Date(schedule.endTime);
+      
+      if (endTime <= now) {
+        setSubmissionMessage('Error: Cannot activate content that has already expired. Please update the end time first.');
+        return;
+      }
+    }
+
     try {
       const updatedSchedule = {
         ...schedule,
@@ -302,6 +314,16 @@ function AdminPanel() {
   const formatDate = (dateString) => {
     return formatScheduleDate(dateString);
   };
+
+  // Handle TV filter change
+  const handleTVFilterChange = (tvFilter) => {
+    setSelectedTVFilter(tvFilter);
+  };
+
+  // Filter schedules based on selected TV
+  const filteredSchedules = selectedTVFilter === 'all' 
+    ? schedules 
+    : schedules.filter(schedule => schedule.targetTVs.includes(selectedTVFilter));
 
   return (
     <div className="admin-panel">
@@ -563,16 +585,43 @@ function AdminPanel() {
         <div className="current-uploads-section">
           <h2>Existing Content Schedules</h2>
           
+          {/* TV Filter */}
+          <div className="tv-filter-section">
+            <label className="tv-filter-label">Filter by TV:</label>
+            <div className="tv-filter-options">
+              <button
+                className={`tv-filter-btn all ${selectedTVFilter === 'all' ? 'active' : ''}`}
+                onClick={() => handleTVFilterChange('all')}
+              >
+                All TVs
+              </button>
+              {tvOptions.map(tv => (
+                <button
+                  key={tv.value}
+                  className={`tv-filter-btn ${selectedTVFilter === tv.value ? 'active' : ''}`}
+                  onClick={() => handleTVFilterChange(tv.value)}
+                >
+                  {tv.icon} {tv.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
           {isLoading ? (
             <div className="loading-message">Loading schedules...</div>
-          ) : schedules.length === 0 ? (
+          ) : filteredSchedules.length === 0 ? (
             <div className="no-content">
               <div className="empty-icon">📋</div>
-              <span>No content schedules found</span>
+              <span>
+                {selectedTVFilter === 'all' 
+                  ? 'No content schedules found' 
+                  : `No content schedules found for ${tvOptions.find(tv => tv.value === selectedTVFilter)?.label || selectedTVFilter}`
+                }
+              </span>
             </div>
           ) : (
             <div className="schedules-list">
-              {schedules.map(schedule => (
+              {filteredSchedules.map(schedule => (
                 <div key={schedule.id} className={`schedule-card ${!schedule.active ? 'inactive' : ''}`}>
                   <div className="schedule-header">
                     <h3>{schedule.title}</h3>
