@@ -5,7 +5,9 @@
 }
 
 /* Ensure all elements include padding in their width/height */
-*, *:before, *:after {
+*,
+*:before,
+*:after {
   box-sizing: border-box;
 }
 
@@ -16,7 +18,8 @@
   background: transparent;
 }
 
-html:not(.admin-mode), body:not(.admin-view) {
+html:not(.admin-mode),
+body:not(.admin-view) {
   overflow: hidden;
   height: 100%;
 }
@@ -25,7 +28,9 @@ html:not(.admin-mode), body:not(.admin-view) {
 .tv-page {
   padding: 0;
   width: calc(100% - var(--sidebar-width));
-  height: calc(100vh - var(--navbar-height)); /* Use CSS variable for navbar height */
+  height: calc(
+    100vh - var(--navbar-height)
+  ); /* Use CSS variable for navbar height */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -462,7 +467,7 @@ body.sidebar-closed .tv-page {
   gap: 1rem;
   z-index: 100;
   padding: 12px 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.3), transparent);
   pointer-events: none; /* Prevent indicator from blocking interaction */
 }
 
@@ -526,36 +531,36 @@ body.sidebar-closed .tv-page {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
+
   .tv-page {
     left: 0;
     width: 100%;
     height: calc(100vh - var(--navbar-height)); /* Use variable */
   }
-  
+
   .tv-message-display {
     padding: 1rem; /* Remove indicator space from mobile too */
   }
-  
+
   .message-icon {
     font-size: 4rem;
     margin-bottom: 2rem;
   }
-  
+
   .message-text {
     font-size: min(3rem, 6vw);
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, 1fr);
   }
-  
+
   .info-icon {
     font-size: 2.5rem;
     margin-right: 1.5rem;
   }
-  
+
   .info-value {
     font-size: 2rem;
   }

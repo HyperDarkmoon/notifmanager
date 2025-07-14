@@ -1,43 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import company from './imgs/company.png';
-import './styles/base.css';
-import './styles/navbar.css';
-import './styles/sidebar.css';
-import './styles/welcome.css';
-import './styles/tvpage.css';
-import './styles/auth.css';
-import './styles/admin.css';
-import TV1 from './tvpages/tv1';
-import TV2 from './tvpages/tv2';
-import TV3 from './tvpages/tv3';
-import TV4 from './tvpages/tv4';
-import Login from './components/Login';
-import Signup from './components/Signup';
-import AdminPanel from './components/AdminPanel';
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import company from "./imgs/company.png";
+import "./styles/base.css";
+import "./styles/navbar.css";
+import "./styles/sidebar.css";
+import "./styles/welcome.css";
+import "./styles/tvpage.css";
+import "./styles/auth.css";
+import "./styles/admin.css";
+import TV1 from "./tvpages/tv1";
+import TV2 from "./tvpages/tv2";
+import TV3 from "./tvpages/tv3";
+import TV4 from "./tvpages/tv4";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import AdminPanel from "./components/AdminPanel";
 
 // Component to handle navigation and layout
 function NavigationLayoutWithLogout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Add sidebar state class to body
   useEffect(() => {
-    document.body.classList.toggle('sidebar-closed', !sidebarOpen);
+    document.body.classList.toggle("sidebar-closed", !sidebarOpen);
     // Force a layout recalculation to ensure proper sizing
     setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event("resize"));
     }, 300);
   }, [sidebarOpen]);
 
   // Get current TV number from the path
   const getCurrentTV = () => {
     const path = location.pathname;
-    if (path === '/tv1') return 1;
-    if (path === '/tv2') return 2;
-    if (path === '/tv3') return 3;
-    if (path === '/tv4') return 4;
+    if (path === "/tv1") return 1;
+    if (path === "/tv2") return 2;
+    if (path === "/tv3") return 3;
+    if (path === "/tv4") return 4;
     return null;
   };
 
@@ -48,11 +55,11 @@ function NavigationLayoutWithLogout({ onLogout }) {
   };
 
   return (
-    <div className={`App ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div className={`App ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-content">
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
@@ -69,13 +76,15 @@ function NavigationLayoutWithLogout({ onLogout }) {
       </nav>
 
       {/* Sidebar Menu */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <h3 className="sidebar-title">Select TV</h3>
         <nav className="tv-menu">
           {[1, 2, 3, 4].map((tvNumber) => (
             <button
               key={tvNumber}
-              className={`tv-menu-item ${selectedTV === tvNumber ? 'active' : ''}`}
+              className={`tv-menu-item ${
+                selectedTV === tvNumber ? "active" : ""
+              }`}
               onClick={() => handleTVSelection(tvNumber)}
             >
               <div className="tv-menu-icon">📺</div>
@@ -93,25 +102,28 @@ function NavigationLayoutWithLogout({ onLogout }) {
             <Route path="/tv2" element={<TV2 />} />
             <Route path="/tv3" element={<TV3 />} />
             <Route path="/tv4" element={<TV4 />} />
-            <Route path="/" element={
-              <div className="welcome-section">
-                <h1>Welcome to Notification Manager</h1>
-                <p>Select a TV from the sidebar to manage notifications</p>
-                <div className="tv-grid">
-                  {[1, 2, 3, 4].map((tvNumber) => (
-                    <div 
-                      key={tvNumber}
-                      className="tv-card-preview"
-                      onClick={() => handleTVSelection(tvNumber)}
-                    >
-                      <div className="tv-icon">📺</div>
-                      <h3>Television {tvNumber}</h3>
-                      <p>Click to manage</p>
-                    </div>
-                  ))}
+            <Route
+              path="/"
+              element={
+                <div className="welcome-section">
+                  <h1>Welcome to Notification Manager</h1>
+                  <p>Select a TV from the sidebar to manage notifications</p>
+                  <div className="tv-grid">
+                    {[1, 2, 3, 4].map((tvNumber) => (
+                      <div
+                        key={tvNumber}
+                        className="tv-card-preview"
+                        onClick={() => handleTVSelection(tvNumber)}
+                      >
+                        <div className="tv-icon">📺</div>
+                        <h3>Television {tvNumber}</h3>
+                        <p>Click to manage</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            } />
+              }
+            />
           </Routes>
         </div>
       </main>
@@ -125,11 +137,11 @@ function AdminPanelLayout({ onLogout }) {
   useEffect(() => {
     // Add small delay to let DOM update
     const timer = setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event("resize"));
     }, 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   return (
     <div className="admin-layout">
       <nav className="navbar">
@@ -156,12 +168,12 @@ function App() {
 
   useEffect(() => {
     // Check if user is already logged in
-    const user = localStorage.getItem('user');
-    const storedRole = localStorage.getItem('userRole');
-    
+    const user = localStorage.getItem("user");
+    const storedRole = localStorage.getItem("userRole");
+
     if (user) {
       setIsAuthenticated(true);
-      setUserRole(storedRole || 'USER');
+      setUserRole(storedRole || "USER");
     }
   }, []);
 
@@ -169,35 +181,35 @@ function App() {
     setIsAuthenticated(success);
     if (success) {
       // Get user role after login
-      const storedRole = localStorage.getItem('userRole');
-      setUserRole(storedRole || 'USER');
+      const storedRole = localStorage.getItem("userRole");
+      setUserRole(storedRole || "USER");
     }
   };
 
   const handleSignupSuccess = () => {
     // Redirect to login after successful signup
-    window.location.href = '/login';
+    window.location.href = "/login";
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('userRole');
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
     setIsAuthenticated(false);
     setUserRole(null);
   };
 
   // Render the appropriate layout based on user role
   const renderAuthenticatedContent = () => {
-    if (userRole === 'ADMIN') {
+    if (userRole === "ADMIN") {
       // Add admin-view class to body for admin-specific styles
-      document.body.classList.add('admin-view');
-      document.body.classList.remove('sidebar-closed');
-      document.documentElement.classList.add('admin-mode');
+      document.body.classList.add("admin-view");
+      document.body.classList.remove("sidebar-closed");
+      document.documentElement.classList.add("admin-mode");
       return <AdminPanelLayout onLogout={handleLogout} />;
     } else {
       // Remove admin-view class when not in admin mode
-      document.body.classList.remove('admin-view');
-      document.documentElement.classList.remove('admin-mode');
+      document.body.classList.remove("admin-view");
+      document.documentElement.classList.remove("admin-mode");
       return <NavigationLayoutWithLogout onLogout={handleLogout} />;
     }
   };
@@ -205,15 +217,36 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
-        } />
-        <Route path="/signup" element={
-          isAuthenticated ? <Navigate to="/" /> : <Signup onSignupSuccess={handleSignupSuccess} />
-        } />
-        <Route path="*" element={
-          isAuthenticated ? renderAuthenticatedContent() : <Navigate to="/login" />
-        } />
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" />
+            ) : (
+              <Signup onSignupSuccess={handleSignupSuccess} />
+            )
+          }
+        />
+        <Route
+          path="*"
+          element={
+            isAuthenticated ? (
+              renderAuthenticatedContent()
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
       </Routes>
     </Router>
   );

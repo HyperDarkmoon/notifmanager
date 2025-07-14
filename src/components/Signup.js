@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import company from '../imgs/company.png';
-import '../styles/auth.css';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import company from "../imgs/company.png";
+import "../styles/auth.css";
 
 function Signup({ onSignupSuccess }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return false;
     }
-    
+
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return false;
     }
 
@@ -26,61 +26,61 @@ function Signup({ onSignupSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
-      const response = await fetch('http://localhost:8090/api/auth/signup', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8090/api/auth/signup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username,
-          password
+          password,
         }),
       });
-      
+
       // Check response status first
       if (!response.ok) {
         if (response.status === 409) {
-          throw new Error('Username already exists');
+          throw new Error("Username already exists");
         } else if (response.status >= 500) {
-          throw new Error('Server error. Please try again later');
+          throw new Error("Server error. Please try again later");
         }
       }
-      
+
       // Try to parse JSON
       let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         try {
           data = await response.json();
         } catch (jsonError) {
-          console.error('JSON parsing error:', jsonError);
-          throw new Error('Invalid response from server');
+          console.error("JSON parsing error:", jsonError);
+          throw new Error("Invalid response from server");
         }
       } else {
         const textResponse = await response.text();
-        console.error('Unexpected response format:', textResponse);
-        throw new Error('Invalid response format from server');
+        console.error("Unexpected response format:", textResponse);
+        throw new Error("Invalid response format from server");
       }
-      
+
       // Check for error message in response data
       if (data && data.error) {
         throw new Error(data.error);
       }
-      
+
       // Signup successful
       onSignupSuccess();
     } catch (error) {
-      console.error('Signup error:', error);
-      setError(error.message || 'Failed to register. Please try again.');
+      console.error("Signup error:", error);
+      setError(error.message || "Failed to register. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +98,9 @@ function Signup({ onSignupSuccess }) {
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="username" className="form-label">Username</label>
+              <label htmlFor="username" className="form-label">
+                Username
+              </label>
               <input
                 type="text"
                 id="username"
@@ -111,7 +113,9 @@ function Signup({ onSignupSuccess }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password" className="form-label">Password</label>
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
               <input
                 type="password"
                 id="password"
@@ -124,7 +128,9 @@ function Signup({ onSignupSuccess }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="form-label">
+                Confirm Password
+              </label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -143,9 +149,9 @@ function Signup({ onSignupSuccess }) {
               </div>
             )}
 
-            <button 
-              type="submit" 
-              className={`login-button ${isLoading ? 'loading' : ''}`}
+            <button
+              type="submit"
+              className={`login-button ${isLoading ? "loading" : ""}`}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -154,13 +160,18 @@ function Signup({ onSignupSuccess }) {
                   Creating account...
                 </>
               ) : (
-                'Sign Up'
+                "Sign Up"
               )}
             </button>
           </form>
 
           <div className="login-footer">
-            <p>Already have an account? <Link to="/login" className="auth-link">Sign In</Link></p>
+            <p>
+              Already have an account?{" "}
+              <Link to="/login" className="auth-link">
+                Sign In
+              </Link>
+            </p>
           </div>
         </div>
       </div>

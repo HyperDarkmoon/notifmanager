@@ -76,12 +76,12 @@
     min-height: auto;
     top: 0;
   }
-  
+
   .tv-menu {
     flex-direction: row;
     overflow-x: auto;
   }
-  
+
   .tv-menu-item {
     min-width: 120px;
     flex-shrink: 0;

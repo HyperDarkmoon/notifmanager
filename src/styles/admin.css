@@ -785,39 +785,39 @@
   .admin-panel {
     padding: 1rem;
   }
-  
+
   .tv-selector {
     grid-template-columns: repeat(2, 1fr);
     max-width: none;
   }
-  
+
   .content-type-selector {
     grid-template-columns: 1fr;
   }
-  
+
   .admin-form-container,
   .current-uploads-section {
     padding: 1.5rem;
   }
-  
+
   .form-section {
     padding-bottom: 1.5rem;
   }
-  
+
   .uploads-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .schedule-inputs {
     grid-template-columns: 1fr;
   }
-  
+
   .schedule-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .schedule-actions {
     align-self: flex-end;
   }
@@ -830,8 +830,6 @@
     font-size: 1rem;
   }
 }
-
-
 
 /* Reset the global no-scroll styles for admin panel */
 body.admin-view {
@@ -908,5 +906,7 @@ body.admin-view {
 .admin-layout .admin-panel {
   max-height: none;
   height: auto;
-  min-height: calc(100vh - 72px - 4rem); /* Full height minus navbar and padding */
+  min-height: calc(
+    100vh - 72px - 4rem
+  ); /* Full height minus navbar and padding */
 }

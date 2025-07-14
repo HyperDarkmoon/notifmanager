@@ -1,19 +1,19 @@
 // Authenticated API utility for making requests to the backend
 export const makeAuthenticatedRequest = async (url, options = {}) => {
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem("user"));
   if (!user) {
-    throw new Error('No user authentication found');
+    throw new Error("No user authentication found");
   }
 
   const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Basic ${btoa(`${user.username}:${user.password}`)}`,
-    ...options.headers
+    "Content-Type": "application/json",
+    Authorization: `Basic ${btoa(`${user.username}:${user.password}`)}`,
+    ...options.headers,
   };
 
   const response = await fetch(url, {
     ...options,
-    headers
+    headers,
   });
 
   if (!response.ok) {
