@@ -54,7 +54,7 @@ function AdminPanel() {
     { value: 'TEXT', label: 'Text Content', icon: '📝' },
     { value: 'IMAGE_SINGLE', label: 'Single Image', icon: '🖼️' },
     { value: 'IMAGE_DUAL', label: 'Dual Images', icon: '🖼️🖼️' },
-    { value: 'IMAGE_QUAD', label: 'Quad Images', icon: '🖼️🖼️🖼️🖼️' },
+    { value: 'IMAGE_QUAD', label: 'Quad Images', icon: '🖼️🖼️\n🖼️🖼️' },
     { value: 'VIDEO', label: 'Video Content', icon: '🎥' },
     { value: 'EMBED', label: 'Embed Content', icon: '🌐' }
   ];
@@ -438,7 +438,18 @@ function AdminPanel() {
                       checked={formData.contentType === type.value}
                       onChange={() => handleContentTypeChange(type.value)}
                     />
-                    <div className="content-type-icon">{type.icon}</div>
+                    <div className="content-type-icon">
+                      {type.value === 'IMAGE_QUAD' ? (
+                        <div className="quad-icon-grid">
+                          <span>🖼️</span>
+                          <span>🖼️</span>
+                          <span>🖼️</span>
+                          <span>🖼️</span>
+                        </div>
+                      ) : (
+                        type.icon
+                      )}
+                    </div>
                     <span>{type.label}</span>
                   </label>
                 ))}

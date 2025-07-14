@@ -136,6 +136,16 @@
   font-size: 1.5rem;
 }
 
+/* Quad icon grid for IMAGE_QUAD content type */
+.quad-icon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 .content-type-option:hover {
   border-color: #cbd5e0;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
