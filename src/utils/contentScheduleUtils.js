@@ -19,16 +19,40 @@ export const TV_ENUM = {
 export const getMaxFilesForContentType = (contentType) => {
   switch (contentType) {
     case CONTENT_TYPES.IMAGE_SINGLE:
-      return 1;
+      return Infinity; // Allow unlimited images, will show 1 at a time
     case CONTENT_TYPES.IMAGE_DUAL:
-      return 2;
+      return Infinity; // Allow unlimited images, will show 2 at a time
     case CONTENT_TYPES.IMAGE_QUAD:
-      return 4;
+      return Infinity; // Allow unlimited images, will show 4 at a time
     case CONTENT_TYPES.VIDEO:
       return 1;
     default:
       return 0;
   }
+};
+
+export const getImagesPerSetForContentType = (contentType) => {
+  switch (contentType) {
+    case CONTENT_TYPES.IMAGE_SINGLE:
+      return 1;
+    case CONTENT_TYPES.IMAGE_DUAL:
+      return 2;
+    case CONTENT_TYPES.IMAGE_QUAD:
+      return 4;
+    default:
+      return 0;
+  }
+};
+
+export const getImageSetsFromUrls = (imageUrls, contentType) => {
+  const imagesPerSet = getImagesPerSetForContentType(contentType);
+  if (imagesPerSet === 0) return [];
+  
+  const sets = [];
+  for (let i = 0; i < imageUrls.length; i += imagesPerSet) {
+    sets.push(imageUrls.slice(i, i + imagesPerSet));
+  }
+  return sets;
 };
 
 export const validateSchedule = (formData) => {
@@ -54,11 +78,11 @@ export const validateSchedule = (formData) => {
   }
 
   if (formData.contentType.startsWith("IMAGE_")) {
-    const requiredImages = getMaxFilesForContentType(formData.contentType);
-    if (formData.imageUrls.length !== requiredImages) {
-      errors.push(
-        `${formData.contentType} requires exactly ${requiredImages} image(s)`
-      );
+    const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
+    if (formData.imageUrls.length === 0) {
+      errors.push(`${formData.contentType} requires at least ${imagesPerSet} image(s)`);
+    } else if (formData.imageUrls.length % imagesPerSet !== 0) {
+      errors.push(`${formData.contentType} requires images in multiples of ${imagesPerSet}. You have ${formData.imageUrls.length} images.`);
     }
   }
 

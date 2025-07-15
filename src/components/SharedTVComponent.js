@@ -11,6 +11,7 @@ import "../styles/tvpage.css";
 const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
   const {
     contentIndex,
+    imageSetIndex,
     temperature,
     pressure,
     randomText,
@@ -40,6 +41,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
       case 2:
         return renderCustomDisplay(
           customContent,
+          imageSetIndex,
           handleVideoStart,
           handleVideoEnd
         );

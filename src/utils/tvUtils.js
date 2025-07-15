@@ -1,4 +1,5 @@
 import { debugAuthenticatedApiCall } from "./authenticatedApi";
+import { getImageSetsFromUrls, getImagesPerSetForContentType } from "./contentScheduleUtils";
 
 // Shared constants
 export const ROTATION_PERIOD = 5000; // 5 seconds per content type
@@ -183,6 +184,7 @@ export const renderMessageDisplay = (randomText) => (
 
 export const renderCustomDisplay = (
   customContent,
+  imageSetIndex,
   onVideoStart,
   onVideoEnd
 ) => {
@@ -196,19 +198,27 @@ export const renderCustomDisplay = (
         <div className="custom-file">
           {/* Handle different image content types */}
           {customContent.imageUrls && customContent.imageUrls.length > 0 ? (
-            <div
-              className={`custom-file-image-grid grid-${customContent.imageUrls.length}`}
-            >
-              {customContent.imageUrls.map((url, index) => (
-                <div key={index} className="custom-file-image-container">
-                  <img
-                    src={url}
-                    alt={`Content ${index + 1}`}
-                    className="custom-content-image"
-                  />
+            (() => {
+              const imagesPerSet = getImagesPerSetForContentType(customContent.contentType);
+              const imageSets = getImageSetsFromUrls(customContent.imageUrls, customContent.contentType);
+              
+              // Use the current image set based on imageSetIndex
+              const currentSet = imageSets[imageSetIndex] || imageSets[0] || [];
+              
+              return (
+                <div className={`custom-file-image-grid grid-${imagesPerSet}`}>
+                  {currentSet.map((url, index) => (
+                    <div key={index} className="custom-file-image-container">
+                      <img
+                        src={url}
+                        alt={`Content ${index + 1}`}
+                        className="custom-content-image"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()
           ) : null}
         </div>
       ) : customContent.contentType === "VIDEO" ? (

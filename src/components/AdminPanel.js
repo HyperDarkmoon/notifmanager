@@ -3,7 +3,7 @@ import "../styles/admin.css";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import {
   formatScheduleDate,
-  getMaxFilesForContentType,
+  getImagesPerSetForContentType 
 } from "../utils/contentScheduleUtils";
 
 function AdminPanel() {
@@ -133,13 +133,32 @@ function AdminPanel() {
   // Handle file upload
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
-    const maxFiles = getMaxFilesForContentType(formData.contentType);
+    const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
 
-    if (files.length > maxFiles) {
-      setSubmissionMessage(
-        `Error: ${formData.contentType} allows maximum ${maxFiles} image(s)`
-      );
+    // Check if we have at least one image
+    if (files.length === 0) {
+      setSubmissionMessage("");
       return;
+    }
+
+    // Check if we have at least one complete set
+    if (files.length < imagesPerSet) {
+      setSubmissionMessage(
+        `Note: You need at least ${imagesPerSet} image(s) for one complete set. You have ${files.length} image(s).`
+      );
+    } else {
+      const completeSets = Math.floor(files.length / imagesPerSet);
+      const remainingImages = files.length % imagesPerSet;
+      
+      if (remainingImages === 0) {
+        setSubmissionMessage(
+          `Perfect! ${files.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
+        );
+      } else {
+        setSubmissionMessage(
+          `Good! ${files.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Complete sets will rotate every 5 seconds.`
+        );
+      }
     }
 
     setImageFiles(files);
@@ -218,10 +237,14 @@ function AdminPanel() {
       }
 
       if (formData.contentType.startsWith("IMAGE_")) {
-        const requiredImages = getMaxFilesForContentType(formData.contentType);
-        if (formData.imageUrls.length !== requiredImages) {
+        const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
+        if (formData.imageUrls.length === 0) {
           throw new Error(
-            `${formData.contentType} requires exactly ${requiredImages} image(s)`
+            `${formData.contentType} requires at least ${imagesPerSet} image(s)`
+          );
+        } else if (formData.imageUrls.length < imagesPerSet) {
+          throw new Error(
+            `${formData.contentType} requires at least ${imagesPerSet} image(s) for one complete set. You have ${formData.imageUrls.length} image(s).`
           );
         }
       }
@@ -534,7 +557,7 @@ function AdminPanel() {
                     <input
                       type="file"
                       accept="image/*"
-                      multiple={formData.contentType !== "IMAGE_SINGLE"}
+                      multiple={true}
                       onChange={handleFileUpload}
                       className="file-input"
                     />
@@ -543,11 +566,11 @@ function AdminPanel() {
                       <strong>Choose Images</strong>
                       <div className="upload-help">
                         {formData.contentType === "IMAGE_SINGLE" &&
-                          "Select 1 image"}
+                          "Upload multiple images - they will rotate every 5 seconds"}
                         {formData.contentType === "IMAGE_DUAL" &&
-                          "Select 2 images"}
+                          "Upload images in sets of 2 - each pair will rotate every 5 seconds"}
                         {formData.contentType === "IMAGE_QUAD" &&
-                          "Select 4 images"}
+                          "Upload images in sets of 4 - each group will rotate every 5 seconds"}
                       </div>
                     </div>
                   </label>
