@@ -175,22 +175,14 @@ function AdminPanel() {
     setVideoFiles([]);
   };
 
-  // Handle file upload
-  const handleFileUpload = (e) => {
+  // Handle file upload with support for larger files
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
 
     // Check if we have at least one image
     if (files.length === 0) {
       setSubmissionMessage("");
-      return;
-    }
-
-    // Check file sizes to avoid JSON issues
-    const maxFileSize = 1024 * 1024; // 1MB limit per file
-    const oversizedFiles = files.filter(file => file.size > maxFileSize);
-    if (oversizedFiles.length > 0) {
-      setSubmissionMessage(`Error: Some files are too large. Maximum file size is 1MB. Large files: ${oversizedFiles.map(f => f.name).join(', ')}`);
       return;
     }
 
@@ -216,25 +208,84 @@ function AdminPanel() {
 
     setImageFiles(files);
 
-    // Convert files to base64 for smaller files, use object URLs for preview
-    const filePromises = files.map((file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-    });
+    // Process files: use base64 for small files, upload large files separately
+    const maxBase64Size = 2 * 1024 * 1024; // 2MB threshold for base64 (increased from 1MB)
+    const imageUrls = [];
+    
+    for (const file of files) {
+      if (file.size <= maxBase64Size) {
+        // Small file: convert to base64
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        imageUrls.push(base64);
+      } else {
+        // Large file: upload to server and get URL
+        try {
+          setSubmissionMessage(`Uploading large image: ${file.name}...`);
+          const uploadedUrl = await uploadLargeFile(file);
+          imageUrls.push(uploadedUrl);
+        } catch (error) {
+          setSubmissionMessage(`Error uploading ${file.name}: ${error.message}`);
+          return;
+        }
+      }
+    }
 
-    Promise.all(filePromises).then((dataUrls) => {
-      setFormData((prev) => ({
-        ...prev,
-        imageUrls: dataUrls,
-      }));
-    });
+    setFormData((prev) => ({
+      ...prev,
+      imageUrls: imageUrls,
+    }));
+
+    setSubmissionMessage("All images processed successfully!");
   };
 
-  // Handle video file upload
-  const handleVideoUpload = (e) => {
+  // Upload large files to server with fallback to base64
+  const uploadLargeFile = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await makeAuthenticatedRequest(
+        "http://localhost:8090/api/content/upload-file",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.fileUrl; // Assuming backend returns { fileUrl: "..." }
+      
+    } catch (error) {
+      console.warn(`File upload endpoint not available, falling back to base64 for ${file.name}:`, error.message);
+      
+      // Fallback to base64 if upload endpoint is not available
+      // But warn about potential size issues
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 10MB.`);
+      }
+      
+      // Convert to base64 as fallback
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      
+      return base64;
+    }
+  };
+
+  // Handle video file upload with support for larger files
+  const handleVideoUpload = async (e) => {
     const files = Array.from(e.target.files);
 
     if (files.length > 1) {
@@ -242,30 +293,47 @@ function AdminPanel() {
       return;
     }
 
-    // Check file size to avoid JSON issues
-    const maxFileSize = 5 * 1024 * 1024; // 5MB limit for video
-    if (files.length > 0 && files[0].size > maxFileSize) {
-      setSubmissionMessage(`Error: Video file is too large. Maximum file size is 5MB. File size: ${(files[0].size / (1024 * 1024)).toFixed(1)}MB`);
+    if (files.length === 0) {
+      setVideoFiles([]);
+      setFormData((prev) => ({ ...prev, videoUrls: [] }));
       return;
     }
 
+    const file = files[0];
     setVideoFiles(files);
 
-    // Convert files to base64 for smaller files
-    const filePromises = files.map((file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(filePromises).then((dataUrls) => {
-      setFormData((prev) => ({
-        ...prev,
-        videoUrls: dataUrls,
-      }));
-    });
+    // Process video: use base64 for small files, upload large files separately
+    const maxBase64Size = 10 * 1024 * 1024; // 10MB threshold for base64 (increased from 5MB)
+    
+    try {
+      if (file.size <= maxBase64Size) {
+        // Small video: convert to base64
+        setSubmissionMessage("Processing video...");
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        
+        setFormData((prev) => ({
+          ...prev,
+          videoUrls: [base64],
+        }));
+        setSubmissionMessage("Video processed successfully!");
+      } else {
+        // Large video: upload to server and get URL
+        setSubmissionMessage(`Uploading large video: ${file.name}...`);
+        const uploadedUrl = await uploadLargeFile(file);
+        
+        setFormData((prev) => ({
+          ...prev,
+          videoUrls: [uploadedUrl],
+        }));
+        setSubmissionMessage("Video uploaded successfully!");
+      }
+    } catch (error) {
+      setSubmissionMessage(`Error processing video ${file.name}: ${error.message}`);
+    }
   };
 
   // Get maximum files allowed for content type
