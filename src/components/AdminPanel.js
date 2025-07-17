@@ -30,6 +30,8 @@ function AdminPanel() {
     endTime: getCurrentDateTime(),
     targetTVs: [],
     active: true,
+    timeSchedules: [], // New field for multiple time schedules
+    isImmediate: true, // Flag to determine if content is immediate/unscheduled
   });
 
   // UI state
@@ -100,15 +102,6 @@ function AdminPanel() {
     }));
   };
 
-  // Handle clearing schedule for immediate content
-  const handleClearSchedule = () => {
-    setFormData((prev) => ({
-      ...prev,
-      startTime: "",
-      endTime: "",
-    }));
-  };
-
   // Handle setting current time for schedule
   const handleSetCurrentTime = () => {
     const currentTime = getCurrentDateTime();
@@ -116,6 +109,58 @@ function AdminPanel() {
       ...prev,
       startTime: currentTime,
       endTime: currentTime,
+      isImmediate: false,
+    }));
+  };
+
+  // Handle adding a new time schedule
+  const handleAddTimeSchedule = () => {
+    if (!formData.startTime || !formData.endTime) {
+      setSubmissionMessage("Please set both start and end times before adding to schedule list");
+      return;
+    }
+
+    const startDate = new Date(formData.startTime);
+    const endDate = new Date(formData.endTime);
+
+    if (startDate >= endDate) {
+      setSubmissionMessage("Start time must be before end time");
+      return;
+    }
+
+    const newSchedule = {
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      id: Date.now() // Temporary ID for frontend management
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      timeSchedules: [...prev.timeSchedules, newSchedule],
+      startTime: getCurrentDateTime(),
+      endTime: getCurrentDateTime(),
+      isImmediate: false,
+    }));
+
+    setSubmissionMessage("Time schedule added successfully! Add more or submit to create content.");
+  };
+
+  // Handle removing a time schedule
+  const handleRemoveTimeSchedule = (scheduleId) => {
+    setFormData((prev) => ({
+      ...prev,
+      timeSchedules: prev.timeSchedules.filter(schedule => schedule.id !== scheduleId),
+    }));
+  };
+
+  // Handle immediate content toggle
+  const handleImmediateToggle = (isImmediate) => {
+    setFormData((prev) => ({
+      ...prev,
+      isImmediate,
+      timeSchedules: isImmediate ? [] : prev.timeSchedules,
+      startTime: isImmediate ? "" : getCurrentDateTime(),
+      endTime: isImmediate ? "" : getCurrentDateTime(),
     }));
   };
   const handleContentTypeChange = (contentType) => {
@@ -141,6 +186,14 @@ function AdminPanel() {
       return;
     }
 
+    // Check file sizes to avoid JSON issues
+    const maxFileSize = 1024 * 1024; // 1MB limit per file
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    if (oversizedFiles.length > 0) {
+      setSubmissionMessage(`Error: Some files are too large. Maximum file size is 1MB. Large files: ${oversizedFiles.map(f => f.name).join(', ')}`);
+      return;
+    }
+
     // Check if we have at least one complete set
     if (files.length < imagesPerSet) {
       setSubmissionMessage(
@@ -163,7 +216,7 @@ function AdminPanel() {
 
     setImageFiles(files);
 
-    // Convert files to data URLs (for preview) and prepare for upload
+    // Convert files to base64 for smaller files, use object URLs for preview
     const filePromises = files.map((file) => {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -189,9 +242,16 @@ function AdminPanel() {
       return;
     }
 
+    // Check file size to avoid JSON issues
+    const maxFileSize = 5 * 1024 * 1024; // 5MB limit for video
+    if (files.length > 0 && files[0].size > maxFileSize) {
+      setSubmissionMessage(`Error: Video file is too large. Maximum file size is 5MB. File size: ${(files[0].size / (1024 * 1024)).toFixed(1)}MB`);
+      return;
+    }
+
     setVideoFiles(files);
 
-    // Convert files to data URLs (for preview) and prepare for upload
+    // Convert files to base64 for smaller files
     const filePromises = files.map((file) => {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -238,66 +298,98 @@ function AdminPanel() {
 
       if (formData.contentType.startsWith("IMAGE_")) {
         const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
-        if (formData.imageUrls.length === 0) {
+        if (imageFiles.length === 0) {
           throw new Error(
             `${formData.contentType} requires at least ${imagesPerSet} image(s)`
           );
-        } else if (formData.imageUrls.length < imagesPerSet) {
+        } else if (imageFiles.length < imagesPerSet) {
           throw new Error(
-            `${formData.contentType} requires at least ${imagesPerSet} image(s) for one complete set. You have ${formData.imageUrls.length} image(s).`
+            `${formData.contentType} requires at least ${imagesPerSet} image(s) for one complete set. You have ${imageFiles.length} image(s).`
           );
         }
       }
 
       if (formData.contentType === "VIDEO") {
-        if (formData.videoUrls.length !== 1) {
+        if (videoFiles.length !== 1) {
           throw new Error("Video content requires exactly 1 video file");
         }
       }
 
-      // Validate date/time if provided - both must be provided or both must be empty
-      if (
-        (formData.startTime && !formData.endTime) ||
-        (!formData.startTime && formData.endTime)
-      ) {
-        throw new Error(
-          "Both start time and end time must be provided, or both must be empty for immediate/indefinite content"
-        );
-      }
+      // Validate date/time if provided - for multiple schedules, validate individual schedules
+      if (!formData.isImmediate) {
+        if (formData.timeSchedules.length === 0) {
+          throw new Error(
+            "For scheduled content, either set it as immediate or add at least one time schedule"
+          );
+        }
 
-      if (formData.startTime && formData.endTime) {
-        const startDate = new Date(formData.startTime);
-        const endDate = new Date(formData.endTime);
+        // Validate each time schedule
+        for (const schedule of formData.timeSchedules) {
+          const startDate = new Date(schedule.startTime);
+          const endDate = new Date(schedule.endTime);
 
-        if (startDate >= endDate) {
-          throw new Error("Start time must be before end time");
+          if (startDate >= endDate) {
+            throw new Error(`Invalid time schedule: Start time (${formatScheduleDate(schedule.startTime)}) must be before end time (${formatScheduleDate(schedule.endTime)})`);
+          }
         }
       }
 
-      // Prepare submission data
+      // Prepare submission data in DTO format
       const submissionData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         contentType: formData.contentType,
         content: formData.content.trim(),
-        imageUrls: formData.imageUrls,
-        videoUrls: formData.videoUrls,
-        startTime: formData.startTime || null,
-        endTime: formData.endTime || null,
+        imageUrls: formData.imageUrls, // Include image URLs (base64 for small files)
+        videoUrls: formData.videoUrls, // Include video URLs (base64 for small files)
         targetTVs: formData.targetTVs,
         active: formData.active,
       };
 
-      // Submit to backend
+      // Add time schedules based on whether content is immediate or scheduled
+      if (formData.isImmediate) {
+        // For immediate content, don't send any time schedules
+        submissionData.timeSchedules = [];
+        submissionData.startTime = null;
+        submissionData.endTime = null;
+      } else {
+        // For scheduled content, send the time schedules array in the correct format
+        submissionData.timeSchedules = formData.timeSchedules.map(schedule => ({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime
+        }));
+        // Also set legacy fields for backward compatibility
+        if (formData.timeSchedules.length > 0) {
+          submissionData.startTime = formData.timeSchedules[0].startTime;
+          submissionData.endTime = formData.timeSchedules[0].endTime;
+        }
+      }
+
+      console.log("Submitting data:", {
+        title: submissionData.title,
+        contentType: submissionData.contentType,
+        targetTVs: submissionData.targetTVs,
+        active: submissionData.active,
+        timeSchedules: submissionData.timeSchedules,
+        imageUrlsCount: submissionData.imageUrls.length,
+        videoUrlsCount: submissionData.videoUrls.length,
+        isImmediate: formData.isImmediate
+      });
+
+      // Submit to backend using the correct endpoint for multiple schedules
       const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content",
+        "http://localhost:8090/api/content/from-request",
         {
           method: "POST",
           body: JSON.stringify(submissionData),
         }
       );
 
-      await response.json();
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
       setSubmissionMessage("Content schedule created successfully!");
 
@@ -313,6 +405,8 @@ function AdminPanel() {
         endTime: getCurrentDateTime(),
         targetTVs: [],
         active: true,
+        timeSchedules: [],
+        isImmediate: true,
       });
       setImageFiles([]);
       setVideoFiles([]);
@@ -637,55 +731,123 @@ function AdminPanel() {
             <div className="form-section">
               <h2>Schedule (Optional)</h2>
               <p className="form-help">
-                Leave both times empty for immediate and indefinite display, or
-                set both times for scheduled content.
+                Choose whether this content should be displayed immediately (unscheduled) or at specific time slots.
                 <br />
-                <strong>Note:</strong> Scheduled content will temporarily
-                override immediate content during its time window.
+                <strong>Note:</strong> Scheduled content will temporarily override immediate content during its time windows.
               </p>
 
-              <div className="schedule-inputs">
-                <div className="schedule-buttons">
-                  <button
-                    type="button"
-                    className="schedule-helper-btn clear"
-                    onClick={handleClearSchedule}
-                    title="Clear schedule for immediate content"
-                  >
-                    📅❌ Immediate Content
-                  </button>
-                  <button
-                    type="button"
-                    className="schedule-helper-btn current"
-                    onClick={handleSetCurrentTime}
-                    title="Set current time as start point"
-                  >
-                    🕒 Use Current Time
-                  </button>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Start Time</label>
+              {/* Immediate vs Scheduled Toggle */}
+              <div className="schedule-type-selector">
+                <label className={`schedule-type-option ${formData.isImmediate ? 'selected' : ''}`}>
                   <input
-                    type="datetime-local"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleInputChange}
-                    className="form-input"
+                    type="radio"
+                    name="scheduleType"
+                    checked={formData.isImmediate}
+                    onChange={() => handleImmediateToggle(true)}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">End Time</label>
+                  <span>📅 Immediate Content</span>
+                  <small>Display immediately and indefinitely</small>
+                </label>
+                <label className={`schedule-type-option ${!formData.isImmediate ? 'selected' : ''}`}>
                   <input
-                    type="datetime-local"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleInputChange}
-                    className="form-input"
+                    type="radio"
+                    name="scheduleType"
+                    checked={!formData.isImmediate}
+                    onChange={() => handleImmediateToggle(false)}
                   />
-                </div>
+                  <span>⏰ Scheduled Content</span>
+                  <small>Display at specific time slots</small>
+                </label>
               </div>
+
+              {!formData.isImmediate && (
+                <div className="schedule-management">
+                  <h3>Time Schedules</h3>
+                  
+                  {/* Add New Schedule Form */}
+                  <div className="add-schedule-form">
+                    <div className="schedule-inputs">
+                      <div className="schedule-buttons">
+                        <button
+                          type="button"
+                          className="schedule-helper-btn current"
+                          onClick={handleSetCurrentTime}
+                          title="Set current time as start point"
+                        >
+                          🕒 Use Current Time
+                        </button>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Start Time</label>
+                        <input
+                          type="datetime-local"
+                          name="startTime"
+                          value={formData.startTime}
+                          onChange={handleInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">End Time</label>
+                        <input
+                          type="datetime-local"
+                          name="endTime"
+                          value={formData.endTime}
+                          onChange={handleInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <button
+                          type="button"
+                          className="add-schedule-btn"
+                          onClick={handleAddTimeSchedule}
+                        >
+                          ➕ Add Time Slot
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Display Added Schedules */}
+                  {formData.timeSchedules.length > 0 && (
+                    <div className="scheduled-times-list">
+                      <h4>Added Time Slots ({formData.timeSchedules.length})</h4>
+                      <div className="time-slots">
+                        {formData.timeSchedules.map((schedule) => (
+                          <div key={schedule.id} className="time-slot">
+                            <div className="time-slot-info">
+                              <div className="time-slot-period">
+                                <strong>From:</strong> {formatScheduleDate(schedule.startTime)}
+                              </div>
+                              <div className="time-slot-period">
+                                <strong>To:</strong> {formatScheduleDate(schedule.endTime)}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="remove-schedule-btn"
+                              onClick={() => handleRemoveTimeSchedule(schedule.id)}
+                              title="Remove this time slot"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.timeSchedules.length === 0 && (
+                    <div className="no-schedules-message">
+                      <p>No time slots added yet. Add at least one time slot for scheduled content.</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="checkbox-label">
@@ -797,12 +959,33 @@ function AdminPanel() {
                     <p>
                       <strong>TVs:</strong> {schedule.targetTVs.join(", ")}
                     </p>
-                    <p>
-                      <strong>Start:</strong> {formatDate(schedule.startTime)}
-                    </p>
-                    <p>
-                      <strong>End:</strong> {formatDate(schedule.endTime)}
-                    </p>
+                    
+                    {/* Display time schedules */}
+                    {schedule.timeSchedules && schedule.timeSchedules.length > 0 ? (
+                      <div className="schedule-times">
+                        <strong>Scheduled Times ({schedule.timeSchedules.length} slot{schedule.timeSchedules.length > 1 ? 's' : ''}):</strong>
+                        <div className="time-schedules-list">
+                          {schedule.timeSchedules.map((timeSchedule, index) => (
+                            <div key={index} className="time-schedule-item">
+                              <div className="time-schedule-period">
+                                <span className="time-start">{formatDate(timeSchedule.startTime)}</span>
+                                <span className="time-separator">→</span>
+                                <span className="time-end">{formatDate(timeSchedule.endTime)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="schedule-times">
+                        <p>
+                          <strong>Start:</strong> {formatDate(schedule.startTime)}
+                        </p>
+                        <p>
+                          <strong>End:</strong> {formatDate(schedule.endTime)}
+                        </p>
+                      </div>
+                    )}
 
                     {schedule.description && (
                       <p>
