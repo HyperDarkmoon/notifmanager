@@ -175,6 +175,43 @@ function AdminPanel() {
     setVideoFiles([]);
   };
 
+  // Handle removing a specific image
+  const handleRemoveImage = (indexToRemove) => {
+    const newImageFiles = imageFiles.filter((_, index) => index !== indexToRemove);
+    const newImageUrls = formData.imageUrls.filter((_, index) => index !== indexToRemove);
+    
+    setImageFiles(newImageFiles);
+    setFormData((prev) => ({
+      ...prev,
+      imageUrls: newImageUrls,
+    }));
+
+    // Update submission message based on remaining images
+    if (newImageFiles.length === 0) {
+      setSubmissionMessage("");
+    } else {
+      const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
+      if (newImageFiles.length < imagesPerSet) {
+        setSubmissionMessage(
+          `Note: You need at least ${imagesPerSet} image(s) for one complete set. You have ${newImageFiles.length} image(s).`
+        );
+      } else {
+        const completeSets = Math.floor(newImageFiles.length / imagesPerSet);
+        const remainingImages = newImageFiles.length % imagesPerSet;
+        
+        if (remainingImages === 0) {
+          setSubmissionMessage(
+            `Perfect! ${newImageFiles.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
+          );
+        } else {
+          setSubmissionMessage(
+            `Good! ${newImageFiles.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Complete sets will rotate every 5 seconds.`
+          );
+        }
+      }
+    }
+  };
+
   // Handle file upload with support for larger files
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -282,6 +319,16 @@ function AdminPanel() {
       
       return base64;
     }
+  };
+
+  // Handle removing the video
+  const handleRemoveVideo = () => {
+    setVideoFiles([]);
+    setFormData((prev) => ({
+      ...prev,
+      videoUrls: [],
+    }));
+    setSubmissionMessage("");
   };
 
   // Handle video file upload with support for larger files
@@ -741,6 +788,14 @@ function AdminPanel() {
                     <div className="selected-files">
                       {imageFiles.map((file, index) => (
                         <div key={index} className="selected-file">
+                          <button
+                            type="button"
+                            className="remove-image-btn"
+                            onClick={() => handleRemoveImage(index)}
+                            title="Remove this image"
+                          >
+                            ✕
+                          </button>
                           <span className="file-name">{file.name}</span>
                           {formData.imageUrls[index] && (
                             <img
@@ -778,6 +833,14 @@ function AdminPanel() {
                     <div className="selected-files">
                       {videoFiles.map((file, index) => (
                         <div key={index} className="selected-file">
+                          <button
+                            type="button"
+                            className="remove-image-btn"
+                            onClick={handleRemoveVideo}
+                            title="Remove this video"
+                          >
+                            ✕
+                          </button>
                           <span className="file-name">{file.name}</span>
                           {formData.videoUrls[index] && (
                             <video
