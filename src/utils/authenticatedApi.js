@@ -5,11 +5,18 @@ export const makeAuthenticatedRequest = async (url, options = {}) => {
     throw new Error("No user authentication found");
   }
 
+  // Determine if we're sending FormData (for file uploads)
+  const isFormData = options.body instanceof FormData;
+  
   const headers = {
-    "Content-Type": "application/json",
     Authorization: `Basic ${btoa(`${user.username}:${user.password}`)}`,
     ...options.headers,
   };
+
+  // Only set Content-Type for non-FormData requests
+  if (!isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(url, {
     ...options,
