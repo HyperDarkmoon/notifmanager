@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import "../styles/admin.css";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import {
@@ -6,33 +6,95 @@ import {
   getImagesPerSetForContentType 
 } from "../utils/contentScheduleUtils";
 
-function AdminPanel() {
-  // Get current datetime in the format required for datetime-local input
-  const getCurrentDateTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+// Constants moved outside component for better performance
+const TV_OPTIONS = [
+  { value: "TV1", label: "TV 1", icon: "📺" },
+  { value: "TV2", label: "TV 2", icon: "📺" },
+  { value: "TV3", label: "TV 3", icon: "📺" },
+  { value: "TV4", label: "TV 4", icon: "📺" },
+];
 
-  // Form state
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    contentType: "TEXT",
-    content: "",
-    imageUrls: [],
-    videoUrls: [],
-    startTime: getCurrentDateTime(),
-    endTime: getCurrentDateTime(),
-    targetTVs: [],
-    active: true,
-    timeSchedules: [], // New field for multiple time schedules
-    isImmediate: true, // Flag to determine if content is immediate/unscheduled
-  });
+const CONTENT_TYPES = [
+  { value: "TEXT", label: "Text Content", icon: "📝" },
+  { value: "IMAGE_SINGLE", label: "Single Image", icon: "🖼️" },
+  { value: "IMAGE_DUAL", label: "Dual Images", icon: "🖼️🖼️" },
+  { value: "IMAGE_QUAD", label: "Quad Images", icon: "🖼️🖼️\n🖼️🖼️" },
+  { value: "VIDEO", label: "Video Content", icon: "🎥" },
+  { value: "EMBED", label: "Embed Content", icon: "🌐" },
+];
+
+const MAX_BASE64_SIZE_IMAGES = 2 * 1024 * 1024; // 2MB
+const MAX_BASE64_SIZE_VIDEOS = 10 * 1024 * 1024; // 10MB
+const MAX_FALLBACK_SIZE = 10 * 1024 * 1024; // 10MB
+
+// Utility functions
+const getCurrentDateTime = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const getInitialFormData = () => ({
+  title: "",
+  description: "",
+  contentType: "TEXT",
+  content: "",
+  imageUrls: [],
+  videoUrls: [],
+  startTime: getCurrentDateTime(),
+  endTime: getCurrentDateTime(),
+  targetTVs: [],
+  active: true,
+  timeSchedules: [],
+  isImmediate: true,
+});
+
+// Component for rendering time schedule list
+const TimeScheduleList = React.memo(({ timeSchedules, onRemove, formatDate }) => {
+  if (!timeSchedules.length) {
+    return (
+      <div className="no-schedules-message">
+        <p>No time slots added yet. Add at least one time slot for scheduled content.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="scheduled-times-list">
+      <h4>Added Time Slots ({timeSchedules.length})</h4>
+      <div className="time-slots">
+        {timeSchedules.map((schedule) => (
+          <div key={schedule.id} className="time-slot">
+            <div className="time-slot-info">
+              <div className="time-slot-period">
+                <strong>From:</strong> {formatDate(schedule.startTime)}
+              </div>
+              <div className="time-slot-period">
+                <strong>To:</strong> {formatDate(schedule.endTime)}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="remove-schedule-btn"
+              onClick={() => onRemove(schedule.id)}
+              title="Remove this time slot"
+            >
+              🗑️
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+function AdminPanel() {
+  // Form state - use memoized initial data
+  const [formData, setFormData] = useState(() => getInitialFormData());
 
   // UI state
   const [submissionMessage, setSubmissionMessage] = useState("");
@@ -43,31 +105,13 @@ function AdminPanel() {
   const [videoFiles, setVideoFiles] = useState([]);
   const [selectedTVFilter, setSelectedTVFilter] = useState("all");
 
-  // TV options based on TVEnum
-  const tvOptions = [
-    { value: "TV1", label: "TV 1", icon: "📺" },
-    { value: "TV2", label: "TV 2", icon: "📺" },
-    { value: "TV3", label: "TV 3", icon: "📺" },
-    { value: "TV4", label: "TV 4", icon: "📺" },
-  ];
-
-  // Content type options
-  const contentTypes = [
-    { value: "TEXT", label: "Text Content", icon: "📝" },
-    { value: "IMAGE_SINGLE", label: "Single Image", icon: "🖼️" },
-    { value: "IMAGE_DUAL", label: "Dual Images", icon: "🖼️🖼️" },
-    { value: "IMAGE_QUAD", label: "Quad Images", icon: "🖼️🖼️\n🖼️🖼️" },
-    { value: "VIDEO", label: "Video Content", icon: "🎥" },
-    { value: "EMBED", label: "Embed Content", icon: "🌐" },
-  ];
-
   // Fetch existing schedules on component mount
   useEffect(() => {
     fetchSchedules();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch all schedules
-  const fetchSchedules = async () => {
+  // Fetch all schedules - memoized
+  const fetchSchedules = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await makeAuthenticatedRequest(
@@ -81,29 +125,71 @@ function AdminPanel() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
+  // Handle form input changes - memoized
+  const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
+  }, []);
 
-  // Handle TV selection
-  const handleTVSelection = (tvValue) => {
+  // Upload large files to server with fallback to base64 - memoized
+  const uploadLargeFile = useCallback(async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await makeAuthenticatedRequest(
+        "http://localhost:8090/api/content/upload-file",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.fileUrl; // Assuming backend returns { fileUrl: "..." }
+      
+    } catch (error) {
+      console.warn(`File upload endpoint not available, falling back to base64 for ${file.name}:`, error.message);
+      
+      // Fallback to base64 if upload endpoint is not available
+      // But warn about potential size issues
+      if (file.size > MAX_FALLBACK_SIZE) { // 10MB
+        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 10MB.`);
+      }
+      
+      // Convert to base64 as fallback
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      
+      return base64;
+    }
+  }, []);
+
+  // Handle TV selection - memoized
+  const handleTVSelection = useCallback((tvValue) => {
     setFormData((prev) => ({
       ...prev,
       targetTVs: prev.targetTVs.includes(tvValue)
         ? prev.targetTVs.filter((tv) => tv !== tvValue)
         : [...prev.targetTVs, tvValue],
     }));
-  };
+  }, []);
 
-  // Handle setting current time for schedule
-  const handleSetCurrentTime = () => {
+  // Handle setting current time for schedule - memoized
+  const handleSetCurrentTime = useCallback(() => {
     const currentTime = getCurrentDateTime();
     setFormData((prev) => ({
       ...prev,
@@ -111,10 +197,10 @@ function AdminPanel() {
       endTime: currentTime,
       isImmediate: false,
     }));
-  };
+  }, []);
 
-  // Handle adding a new time schedule
-  const handleAddTimeSchedule = () => {
+  // Handle adding a new time schedule - memoized
+  const handleAddTimeSchedule = useCallback(() => {
     if (!formData.startTime || !formData.endTime) {
       setSubmissionMessage("Please set both start and end times before adding to schedule list");
       return;
@@ -143,18 +229,18 @@ function AdminPanel() {
     }));
 
     setSubmissionMessage("Time schedule added successfully! Add more or submit to create content.");
-  };
+  }, [formData.startTime, formData.endTime]);
 
-  // Handle removing a time schedule
-  const handleRemoveTimeSchedule = (scheduleId) => {
+  // Handle removing a time schedule - memoized
+  const handleRemoveTimeSchedule = useCallback((scheduleId) => {
     setFormData((prev) => ({
       ...prev,
       timeSchedules: prev.timeSchedules.filter(schedule => schedule.id !== scheduleId),
     }));
-  };
+  }, []);
 
-  // Handle immediate content toggle
-  const handleImmediateToggle = (isImmediate) => {
+  // Handle immediate content toggle - memoized
+  const handleImmediateToggle = useCallback((isImmediate) => {
     setFormData((prev) => ({
       ...prev,
       isImmediate,
@@ -162,8 +248,10 @@ function AdminPanel() {
       startTime: isImmediate ? "" : getCurrentDateTime(),
       endTime: isImmediate ? "" : getCurrentDateTime(),
     }));
-  };
-  const handleContentTypeChange = (contentType) => {
+  }, []);
+
+  // Handle content type change - memoized
+  const handleContentTypeChange = useCallback((contentType) => {
     setFormData((prev) => ({
       ...prev,
       contentType,
@@ -173,10 +261,10 @@ function AdminPanel() {
     }));
     setImageFiles([]);
     setVideoFiles([]);
-  };
+  }, []);
 
-  // Handle removing a specific image
-  const handleRemoveImage = (indexToRemove) => {
+  // Handle removing a specific image - memoized
+  const handleRemoveImage = useCallback((indexToRemove) => {
     const newImageFiles = imageFiles.filter((_, index) => index !== indexToRemove);
     const newImageUrls = formData.imageUrls.filter((_, index) => index !== indexToRemove);
     
@@ -210,10 +298,10 @@ function AdminPanel() {
         }
       }
     }
-  };
+  }, [imageFiles, formData.imageUrls, formData.contentType]);
 
-  // Handle file upload with support for larger files
-  const handleFileUpload = async (e) => {
+  // Handle file upload with support for larger files - memoized
+  const handleFileUpload = useCallback(async (e) => {
     const files = Array.from(e.target.files);
     const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
 
@@ -246,11 +334,10 @@ function AdminPanel() {
     setImageFiles(files);
 
     // Process files: use base64 for small files, upload large files separately
-    const maxBase64Size = 2 * 1024 * 1024; // 2MB threshold for base64 (increased from 1MB)
     const imageUrls = [];
     
     for (const file of files) {
-      if (file.size <= maxBase64Size) {
+      if (file.size <= MAX_BASE64_SIZE_IMAGES) {
         // Small file: convert to base64
         const base64 = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -277,62 +364,20 @@ function AdminPanel() {
     }));
 
     setSubmissionMessage("All images processed successfully!");
-  };
+  }, [formData.contentType, uploadLargeFile]);
 
-  // Upload large files to server with fallback to base64
-  const uploadLargeFile = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content/upload-file",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.fileUrl; // Assuming backend returns { fileUrl: "..." }
-      
-    } catch (error) {
-      console.warn(`File upload endpoint not available, falling back to base64 for ${file.name}:`, error.message);
-      
-      // Fallback to base64 if upload endpoint is not available
-      // But warn about potential size issues
-      if (file.size > 10 * 1024 * 1024) { // 10MB
-        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 10MB.`);
-      }
-      
-      // Convert to base64 as fallback
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
-      
-      return base64;
-    }
-  };
-
-  // Handle removing the video
-  const handleRemoveVideo = () => {
+  // Handle removing the video - memoized
+  const handleRemoveVideo = useCallback(() => {
     setVideoFiles([]);
     setFormData((prev) => ({
       ...prev,
       videoUrls: [],
     }));
     setSubmissionMessage("");
-  };
+  }, []);
 
-  // Handle video file upload with support for larger files
-  const handleVideoUpload = async (e) => {
+  // Handle video file upload with support for larger files - memoized
+  const handleVideoUpload = useCallback(async (e) => {
     const files = Array.from(e.target.files);
 
     if (files.length > 1) {
@@ -350,10 +395,8 @@ function AdminPanel() {
     setVideoFiles(files);
 
     // Process video: use base64 for small files, upload large files separately
-    const maxBase64Size = 10 * 1024 * 1024; // 10MB threshold for base64 (increased from 5MB)
-    
     try {
-      if (file.size <= maxBase64Size) {
+      if (file.size <= MAX_BASE64_SIZE_VIDEOS) {
         // Small video: convert to base64
         setSubmissionMessage("Processing video...");
         const base64 = await new Promise((resolve) => {
@@ -381,13 +424,10 @@ function AdminPanel() {
     } catch (error) {
       setSubmissionMessage(`Error processing video ${file.name}: ${error.message}`);
     }
-  };
+  }, [uploadLargeFile]);
 
-  // Get maximum files allowed for content type
-  // Note: Using imported utility function
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
+  // Handle form submission - memoized
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmissionMessage("");
@@ -455,43 +495,28 @@ function AdminPanel() {
         description: formData.description.trim(),
         contentType: formData.contentType,
         content: formData.content.trim(),
-        imageUrls: formData.imageUrls, // Include image URLs (base64 for small files)
-        videoUrls: formData.videoUrls, // Include video URLs (base64 for small files)
+        imageUrls: formData.imageUrls,
+        videoUrls: formData.videoUrls,
         targetTVs: formData.targetTVs,
         active: formData.active,
       };
 
       // Add time schedules based on whether content is immediate or scheduled
       if (formData.isImmediate) {
-        // For immediate content, don't send any time schedules
         submissionData.timeSchedules = [];
         submissionData.startTime = null;
         submissionData.endTime = null;
       } else {
-        // For scheduled content, send the time schedules array in the correct format
         submissionData.timeSchedules = formData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
           endTime: schedule.endTime
         }));
-        // Also set legacy fields for backward compatibility
         if (formData.timeSchedules.length > 0) {
           submissionData.startTime = formData.timeSchedules[0].startTime;
           submissionData.endTime = formData.timeSchedules[0].endTime;
         }
       }
 
-      console.log("Submitting data:", {
-        title: submissionData.title,
-        contentType: submissionData.contentType,
-        targetTVs: submissionData.targetTVs,
-        active: submissionData.active,
-        timeSchedules: submissionData.timeSchedules,
-        imageUrlsCount: submissionData.imageUrls.length,
-        videoUrlsCount: submissionData.videoUrls.length,
-        isImmediate: formData.isImmediate
-      });
-
-      // Submit to backend using the correct endpoint for multiple schedules
       const response = await makeAuthenticatedRequest(
         "http://localhost:8090/api/content/from-request",
         {
@@ -508,21 +533,8 @@ function AdminPanel() {
 
       setSubmissionMessage("Content schedule created successfully!");
 
-      // Reset form
-      setFormData({
-        title: "",
-        description: "",
-        contentType: "TEXT",
-        content: "",
-        imageUrls: [],
-        videoUrls: [],
-        startTime: getCurrentDateTime(),
-        endTime: getCurrentDateTime(),
-        targetTVs: [],
-        active: true,
-        timeSchedules: [],
-        isImmediate: true,
-      });
+      // Reset form to initial state
+      setFormData(getInitialFormData());
       setImageFiles([]);
       setVideoFiles([]);
 
@@ -534,10 +546,10 @@ function AdminPanel() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [formData, imageFiles, videoFiles, fetchSchedules]);
 
-  // Delete schedule
-  const handleDeleteSchedule = async (scheduleId) => {
+  // Delete schedule - memoized
+  const handleDeleteSchedule = useCallback(async (scheduleId) => {
     if (!window.confirm("Are you sure you want to delete this schedule?")) {
       return;
     }
@@ -556,10 +568,10 @@ function AdminPanel() {
       console.error("Error deleting schedule:", error);
       setSubmissionMessage(`Error deleting schedule: ${error.message}`);
     }
-  };
+  }, [fetchSchedules]);
 
-  // Toggle schedule active status
-  const handleToggleActive = async (schedule) => {
+  // Toggle schedule active status - memoized
+  const handleToggleActive = useCallback(async (schedule) => {
     // If trying to activate content, check if it has expired
     if (!schedule.active && schedule.endTime) {
       const now = new Date();
@@ -597,25 +609,27 @@ function AdminPanel() {
       console.error("Error updating schedule:", error);
       setSubmissionMessage(`Error updating schedule: ${error.message}`);
     }
-  };
+  }, [fetchSchedules]);
 
-  // Format date for display
-  const formatDate = (dateString) => {
+  // Format date for display - memoized
+  const formatDate = useCallback((dateString) => {
     return formatScheduleDate(dateString);
-  };
+  }, []);
 
-  // Handle TV filter change
-  const handleTVFilterChange = (tvFilter) => {
+  // Handle TV filter change - memoized
+  const handleTVFilterChange = useCallback((tvFilter) => {
     setSelectedTVFilter(tvFilter);
-  };
+  }, []);
 
-  // Filter schedules based on selected TV
-  const filteredSchedules =
+  // Filter schedules based on selected TV - memoized
+  const filteredSchedules = useMemo(() => 
     selectedTVFilter === "all"
       ? schedules
       : schedules.filter((schedule) =>
           schedule.targetTVs.includes(selectedTVFilter)
-        );
+        ),
+    [selectedTVFilter, schedules]
+  );
 
   return (
     <div className="admin-panel">
@@ -674,7 +688,7 @@ function AdminPanel() {
             <div className="form-section">
               <h2>Target TVs *</h2>
               <div className="tv-selector">
-                {tvOptions.map((tv) => (
+                {TV_OPTIONS.map((tv) => (
                   <button
                     key={tv.value}
                     type="button"
@@ -694,7 +708,7 @@ function AdminPanel() {
             <div className="form-section">
               <h2>Content Type *</h2>
               <div className="content-type-selector">
-                {contentTypes.map((type) => (
+                {CONTENT_TYPES.map((type) => (
                   <label
                     key={type.value}
                     className={`content-type-option ${
@@ -802,6 +816,7 @@ function AdminPanel() {
                               src={formData.imageUrls[index]}
                               alt={file.name}
                               className="upload-file-thumbnail"
+                              loading="lazy"
                             />
                           )}
                         </div>
@@ -848,6 +863,7 @@ function AdminPanel() {
                               className="upload-file-thumbnail"
                               controls
                               style={{ maxWidth: "200px", maxHeight: "150px" }}
+                              preload="metadata"
                             />
                           )}
                         </div>
@@ -944,39 +960,11 @@ function AdminPanel() {
                   </div>
 
                   {/* Display Added Schedules */}
-                  {formData.timeSchedules.length > 0 && (
-                    <div className="scheduled-times-list">
-                      <h4>Added Time Slots ({formData.timeSchedules.length})</h4>
-                      <div className="time-slots">
-                        {formData.timeSchedules.map((schedule) => (
-                          <div key={schedule.id} className="time-slot">
-                            <div className="time-slot-info">
-                              <div className="time-slot-period">
-                                <strong>From:</strong> {formatScheduleDate(schedule.startTime)}
-                              </div>
-                              <div className="time-slot-period">
-                                <strong>To:</strong> {formatScheduleDate(schedule.endTime)}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              className="remove-schedule-btn"
-                              onClick={() => handleRemoveTimeSchedule(schedule.id)}
-                              title="Remove this time slot"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.timeSchedules.length === 0 && (
-                    <div className="no-schedules-message">
-                      <p>No time slots added yet. Add at least one time slot for scheduled content.</p>
-                    </div>
-                  )}
+                  <TimeScheduleList
+                    timeSchedules={formData.timeSchedules}
+                    onRemove={handleRemoveTimeSchedule}
+                    formatDate={formatScheduleDate}
+                  />
                 </div>
               )}
 
@@ -1024,7 +1012,7 @@ function AdminPanel() {
               >
                 All TVs
               </button>
-              {tvOptions.map((tv) => (
+              {TV_OPTIONS.map((tv) => (
                 <button
                   key={tv.value}
                   className={`tv-filter-btn ${
@@ -1047,7 +1035,7 @@ function AdminPanel() {
                 {selectedTVFilter === "all"
                   ? "No content schedules found"
                   : `No content schedules found for ${
-                      tvOptions.find((tv) => tv.value === selectedTVFilter)
+                      TV_OPTIONS.find((tv) => tv.value === selectedTVFilter)
                         ?.label || selectedTVFilter
                     }`}
               </span>
@@ -1142,6 +1130,7 @@ function AdminPanel() {
                                 src={url}
                                 alt={`Content ${index + 1}`}
                                 className="preview-thumbnail"
+                                loading="lazy"
                               />
                             ))}
                           </div>
@@ -1159,6 +1148,7 @@ function AdminPanel() {
                               className="preview-thumbnail"
                               controls
                               style={{ maxWidth: "200px", maxHeight: "150px" }}
+                              preload="metadata"
                             />
                           ))}
                         </div>
@@ -1175,4 +1165,4 @@ function AdminPanel() {
   );
 }
 
-export default AdminPanel;
+export default React.memo(AdminPanel);
