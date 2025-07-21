@@ -53,6 +53,27 @@ const getInitialFormData = () => ({
   isImmediate: true,
 });
 
+// Utility function to truncate filename while preserving extension
+const truncateFileName = (fileName, maxLength = 30) => {
+  if (fileName.length <= maxLength) return fileName;
+  
+  const lastDotIndex = fileName.lastIndexOf('.');
+  if (lastDotIndex === -1) {
+    // No extension, just truncate
+    return fileName.substring(0, maxLength - 3) + '...';
+  }
+  
+  const name = fileName.substring(0, lastDotIndex);
+  const extension = fileName.substring(lastDotIndex);
+  const availableLength = maxLength - extension.length - 3; // 3 for "..."
+  
+  if (availableLength <= 0) {
+    return '...' + extension;
+  }
+  
+  return name.substring(0, availableLength) + '...' + extension;
+};
+
 // Component for rendering time schedule list
 const TimeScheduleList = React.memo(({ timeSchedules, onRemove, formatDate }) => {
   if (!timeSchedules.length) {
@@ -810,7 +831,7 @@ function AdminPanel() {
                           >
                             ✕
                           </button>
-                          <span className="file-name">{file.name}</span>
+                          <span className="file-name" title={file.name}>{truncateFileName(file.name)}</span>
                           {formData.imageUrls[index] && (
                             <img
                               src={formData.imageUrls[index]}
@@ -856,7 +877,7 @@ function AdminPanel() {
                           >
                             ✕
                           </button>
-                          <span className="file-name">{file.name}</span>
+                          <span className="file-name" title={file.name}>{truncateFileName(file.name)}</span>
                           {formData.videoUrls[index] && (
                             <video
                               src={formData.videoUrls[index]}
