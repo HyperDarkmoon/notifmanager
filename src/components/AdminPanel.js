@@ -229,23 +229,17 @@ const TVProfilesTab = React.memo(() => {
       ...prev,
       timeSchedules: [...prev.timeSchedules, newSchedule],
       startTime: getCurrentDateTime(),
-      endTime: getCurrentDateTime(),
-      isImmediate: false // Automatically switch to scheduled mode when adding time schedules
+      endTime: getCurrentDateTime()
     }));
 
-    setProfileSubmissionMessage("Time schedule added successfully! Profile automatically switched to scheduled mode.");
+    setProfileSubmissionMessage("Time schedule added successfully! Add more or submit to create profile.");
   }, [profileFormData.startTime, profileFormData.endTime]);
 
   const handleRemoveProfileTimeSchedule = useCallback((scheduleId) => {
-    setProfileFormData(prev => {
-      const newTimeSchedules = prev.timeSchedules.filter(schedule => schedule.id !== scheduleId);
-      return {
-        ...prev,
-        timeSchedules: newTimeSchedules,
-        // If no more schedules, optionally switch back to immediate mode
-        // isImmediate: newTimeSchedules.length === 0 ? true : prev.isImmediate
-      };
-    });
+    setProfileFormData(prev => ({
+      ...prev,
+      timeSchedules: prev.timeSchedules.filter(schedule => schedule.id !== scheduleId)
+    }));
   }, []);
 
   const handleSetProfileCurrentTime = useCallback(() => {
@@ -438,23 +432,6 @@ const TVProfilesTab = React.memo(() => {
         throw new Error("For scheduled profiles, please add at least one time schedule");
       }
 
-      // Debug logging
-      console.log("=== Profile Form Submission Debug ===");
-      console.log("Profile form data isImmediate:", profileFormData.isImmediate);
-      console.log("Profile form data timeSchedules count:", profileFormData.timeSchedules.length);
-      console.log("Profile form data timeSchedules:", profileFormData.timeSchedules);
-      
-      // Auto-fix inconsistent scheduling state
-      let finalIsImmediate = profileFormData.isImmediate;
-      if (profileFormData.timeSchedules.length > 0 && profileFormData.isImmediate) {
-        // If there are time schedules but profile is marked as immediate, switch to scheduled
-        finalIsImmediate = false;
-        console.log("AUTO-CORRECTING: Profile has time schedules, setting isImmediate to false");
-      }
-      
-      console.log("Final isImmediate value:", finalIsImmediate);
-      console.log("=======================================");
-
       // Validate each time schedule
       if (!profileFormData.isImmediate) {
         for (let i = 0; i < profileFormData.timeSchedules.length; i++) {
@@ -496,7 +473,7 @@ const TVProfilesTab = React.memo(() => {
       const submissionData = {
         name: profileFormData.name.trim(),
         description: profileFormData.description.trim(),
-        isImmediate: finalIsImmediate, // Use the corrected value
+        isImmediate: profileFormData.isImmediate,
         timeSchedules: profileFormData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
           endTime: schedule.endTime
@@ -514,9 +491,6 @@ const TVProfilesTab = React.memo(() => {
         }))
       };
 
-      console.log("=== Submitting Profile Data ===");
-      console.log("Submission data:", JSON.stringify(submissionData, null, 2));
-
       const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles", {
         method: "POST",
         body: JSON.stringify(submissionData)
@@ -526,10 +500,6 @@ const TVProfilesTab = React.memo(() => {
         const error = await response.text();
         throw new Error(error || `HTTP ${response.status}`);
       }
-
-      const createdProfile = await response.json();
-      console.log("Profile created successfully:", createdProfile);
-      console.log("Created profile isImmediate:", createdProfile.isImmediate);
 
       setProfileSubmissionMessage("Profile created successfully!");
       
@@ -648,28 +618,6 @@ const TVProfilesTab = React.memo(() => {
     }
   }, [fetchAssignments]);
 
-  // Fix scheduling inconsistencies
-  const handleFixSchedulingInconsistencies = useCallback(async () => {
-    try {
-      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/fix-scheduling", {
-        method: "POST"
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      setProfileSubmissionMessage(result.message || "Scheduling inconsistencies fixed!");
-      
-      // Refresh profiles to see the updated data
-      fetchProfiles();
-    } catch (error) {
-      console.error("Error fixing scheduling inconsistencies:", error);
-      setProfileSubmissionMessage(`Error: ${error.message}`);
-    }
-  }, [fetchProfiles]);
-
   return (
     <div className="profiles-tab">
       <div className="profiles-header">
@@ -700,14 +648,6 @@ const TVProfilesTab = React.memo(() => {
         >
           <span className="btn-icon">📺</span>
           {showAssignmentForm ? "Cancel" : "Assign Profile to TV"}
-        </button>
-        <button
-          className="action-btn fix-scheduling-btn"
-          onClick={handleFixSchedulingInconsistencies}
-          title="Fix profiles that have schedules but are marked as immediate"
-        >
-          <span className="btn-icon">🔧</span>
-          Fix Scheduling Issues
         </button>
       </div>
 
