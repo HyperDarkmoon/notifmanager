@@ -4,6 +4,7 @@ import {
   renderInfoDisplay,
   renderMessageDisplay,
   renderCustomDisplay,
+  renderProfileSlide,
   renderContentIndicators,
 } from "../utils/tvUtils";
 import "../styles/tvpage.css";
@@ -29,6 +30,23 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
       )}, Video playing: ${isVideoPlaying}`
     );
 
+    // Check if we're in profile mode
+    if (customContent && customContent.type === "profile" && customContent.slides) {
+      const currentSlide = customContent.slides[contentIndex];
+      if (currentSlide) {
+        console.log(`${tvId} - Rendering profile slide ${contentIndex + 1}: ${currentSlide.title} (${currentSlide.contentType})`);
+        return renderProfileSlide(
+          currentSlide,
+          imageSetIndex,
+          handleVideoStart,
+          handleVideoEnd
+        );
+      }
+      // Fallback if slide doesn't exist
+      return renderInfoDisplay(temperature, pressure, currentTime);
+    }
+
+    // Regular mode: use original 3-slide system
     // If we don't have custom content and index would be 2, show index 0 instead
     const effectiveIndex =
       !customContent && contentIndex === 2 ? 0 : contentIndex;

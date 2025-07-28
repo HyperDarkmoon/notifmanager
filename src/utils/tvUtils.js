@@ -40,8 +40,59 @@ export const fetchCustomContent = async (
   setCustomContent
 ) => {
   try {
-    // Fetch prioritized active content for this TV from the backend
-    console.log(`${tvId} - Attempting to fetch content from backend`);
+    // First, check if there's an active profile assignment for this TV
+    console.log(`${tvId} - Checking for profile assignment`);
+    
+    let profileAssignment = null;
+    try {
+      const assignmentResponse = await debugAuthenticatedApiCall(
+        `http://localhost:8090/api/profiles/tv/${tvId}`,
+        {
+          method: "GET",
+        }
+      );
+      
+      if (assignmentResponse && assignmentResponse.profile) {
+        profileAssignment = assignmentResponse;
+        console.log(`${tvId} - Found profile assignment: ${assignmentResponse.profile.name}`);
+      }
+    } catch (error) {
+      console.log(`${tvId} - No profile assignment found or error fetching:`, error.message);
+    }
+
+    // If we have a profile assignment, use it and skip regular content schedules
+    if (profileAssignment && profileAssignment.profile && profileAssignment.active) {
+      const profile = profileAssignment.profile;
+      
+      // Convert profile to a format compatible with existing logic
+      const profileContent = {
+        type: "profile",
+        id: `profile-${profile.id}`,
+        title: profile.name,
+        description: profile.description,
+        slides: profile.slides || [],
+        profileId: profile.id,
+        assignmentId: profileAssignment.id
+      };
+
+      // Compare with previous content to see if it changed
+      const prevContentStr = JSON.stringify(prevContentRef.current);
+      const newContentStr = JSON.stringify(profileContent);
+
+      if (prevContentStr !== newContentStr) {
+        console.log(
+          `${tvId} - Profile content changed, updating from "${
+            prevContentRef.current?.title || "none"
+          }" to "${profileContent.title}"`
+        );
+        setCustomContent(profileContent);
+        prevContentRef.current = profileContent;
+      }
+      return; // Exit early - profile has priority over regular schedules
+    }
+
+    // If no profile assignment, proceed with regular content schedule fetching
+    console.log(`${tvId} - No active profile assignment, checking content schedules`);
 
     const schedules = await debugAuthenticatedApiCall(
       `http://localhost:8090/api/content/tv/${tvId}`,
@@ -181,6 +232,91 @@ export const renderMessageDisplay = (randomText) => (
     </div>
   </div>
 );
+
+export const renderProfileSlide = (
+  slide,
+  imageSetIndex,
+  onVideoStart,
+  onVideoEnd
+) => {
+  if (!slide) return null;
+
+  return (
+    <div className="tv-profile-slide-display">
+      <div className="profile-slide-content">
+        {/* Slide Title */}
+        <div className="profile-slide-header">
+          <h2>{slide.title}</h2>
+          {slide.description && <p className="slide-description">{slide.description}</p>}
+        </div>
+
+        {/* Slide Content based on type */}
+        <div className="profile-slide-main">
+          {slide.contentType === "TEXT" && slide.content && (
+            <div className="profile-text-content">
+              <div className="text-content">
+                <p>{slide.content}</p>
+              </div>
+            </div>
+          )}
+
+          {slide.contentType === "EMBED" && slide.content && (
+            <div
+              className="profile-embed-content"
+              dangerouslySetInnerHTML={{ __html: slide.content }}
+            />
+          )}
+
+          {slide.contentType.startsWith("IMAGE_") && slide.imageUrls && slide.imageUrls.length > 0 && (
+            <div className="profile-image-content">
+              {(() => {
+                const imagesPerSet = getImagesPerSetForContentType(slide.contentType);
+                const imageSets = getImageSetsFromUrls(slide.imageUrls, slide.contentType);
+                
+                // Use the current image set based on imageSetIndex
+                const currentSet = imageSets[imageSetIndex] || imageSets[0] || [];
+                
+                return (
+                  <div className={`profile-image-grid grid-${imagesPerSet}`}>
+                    {currentSet.map((url, index) => (
+                      <div key={index} className="profile-image-container">
+                        <img
+                          src={url}
+                          alt={`Slide content ${index + 1}`}
+                          className="profile-slide-image"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {slide.contentType === "VIDEO" && slide.videoUrls && slide.videoUrls.length > 0 && (
+            <div className="profile-video-content">
+              <div className="profile-video-container">
+                <video
+                  src={slide.videoUrls[0]}
+                  className="profile-slide-video"
+                  autoPlay
+                  playsInline
+                  onPlay={onVideoStart}
+                  onEnded={onVideoEnd}
+                  onError={(e) => {
+                    console.error("Profile video playback error:", e);
+                    if (onVideoEnd) onVideoEnd();
+                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const renderCustomDisplay = (
   customContent,
@@ -335,18 +471,36 @@ export const renderCustomDisplay = (
 };
 
 // Shared content indicators component
-export const renderContentIndicators = (contentIndex, customContent) => (
-  <div className="content-indicator">
-    <div
-      className={`indicator-dot ${contentIndex === 0 ? "active" : ""}`}
-    ></div>
-    <div
-      className={`indicator-dot ${contentIndex === 1 ? "active" : ""}`}
-    ></div>
-    {customContent && (
+export const renderContentIndicators = (contentIndex, customContent) => {
+  // Check if we're in profile mode
+  if (customContent && customContent.type === "profile" && customContent.slides) {
+    const slideCount = customContent.slides.length;
+    return (
+      <div className="content-indicator">
+        {Array.from({ length: slideCount }, (_, index) => (
+          <div
+            key={index}
+            className={`indicator-dot ${contentIndex === index ? "active" : ""}`}
+          ></div>
+        ))}
+      </div>
+    );
+  }
+
+  // Regular mode: 2 or 3 indicators
+  return (
+    <div className="content-indicator">
       <div
-        className={`indicator-dot ${contentIndex === 2 ? "active" : ""}`}
+        className={`indicator-dot ${contentIndex === 0 ? "active" : ""}`}
       ></div>
-    )}
-  </div>
-);
+      <div
+        className={`indicator-dot ${contentIndex === 1 ? "active" : ""}`}
+      ></div>
+      {customContent && (
+        <div
+          className={`indicator-dot ${contentIndex === 2 ? "active" : ""}`}
+        ></div>
+      )}
+    </div>
+  );
+};

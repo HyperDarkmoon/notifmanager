@@ -565,3 +565,211 @@ body.sidebar-closed .tv-page {
     font-size: 2rem;
   }
 }
+
+/* Profile Slide Display Styles */
+.tv-profile-slide-display {
+  padding: 2rem;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #e9ecef 100%);
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.profile-slide-content {
+  text-align: center;
+  max-width: 95%;
+  max-height: 95%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-slide-header {
+  margin-bottom: 2rem;
+  max-width: 100%;
+}
+
+.profile-slide-header h2 {
+  color: #2d3748;
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  line-height: 1.2;
+}
+
+.slide-description {
+  color: #4a5568;
+  font-size: 1.2rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.profile-slide-main {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Profile Text Content */
+.profile-text-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.profile-text-content .text-content {
+  max-width: 800px;
+  width: 100%;
+}
+
+.profile-text-content .text-content p {
+  color: #2d3748;
+  font-size: 1.8rem;
+  line-height: 1.6;
+  margin: 0;
+  text-align: center;
+}
+
+/* Profile Embed Content */
+.profile-embed-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Profile Image Content */
+.profile-image-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.profile-image-grid {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Profile Image Grid Layouts */
+.profile-image-grid.grid-1 {
+  grid-template-columns: 1fr;
+}
+
+.profile-image-grid.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.profile-image-grid.grid-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.profile-image-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-slide-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+/* Profile Video Content */
+.profile-video-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-video-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #000;
+}
+
+.profile-slide-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 8px;
+  box-shadow: none;
+  background: #000;
+}
+
+/* Responsive Design for Profile Slides */
+@media (max-width: 768px) {
+  .tv-profile-slide-display {
+    padding: 1rem;
+  }
+
+  .profile-slide-header h2 {
+    font-size: 2rem;
+  }
+
+  .slide-description {
+    font-size: 1rem;
+  }
+
+  .profile-text-content .text-content p {
+    font-size: 1.4rem;
+  }
+
+  .profile-image-grid {
+    gap: 0.25rem;
+  }
+
+  .profile-image-container {
+    border-radius: 6px;
+  }
+
+  .profile-slide-image {
+    border-radius: 6px;
+  }
+
+  .profile-video-content {
+    border-radius: 6px;
+  }
+
+  .profile-slide-video {
+    border-radius: 6px;
+  }
+}
