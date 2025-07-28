@@ -1,0 +1,1091 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
+import { formatScheduleDate } from "../utils/contentScheduleUtils";
+import { getCurrentDateTime, truncateFileName } from "../utils/adminUtils";
+import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS } from "../constants/adminConstants";
+import TimeScheduleList from "./TimeScheduleList";
+
+const TVProfilesTab = React.memo(() => {
+  // Profile management state
+  const [profiles, setProfiles] = useState([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [profileSubmissionMessage, setProfileSubmissionMessage] = useState("");
+  
+  // Profile form state
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [profileFormData, setProfileFormData] = useState({
+    name: "",
+    description: "",
+    isImmediate: true, // Default to immediate
+    timeSchedules: [], // Array of time schedules
+    slides: [
+      {
+        id: 1,
+        title: "",
+        description: "",
+        contentType: "TEXT",
+        content: "",
+        imageUrls: [],
+        videoUrls: [],
+        durationSeconds: 10,
+        active: true
+      }
+    ]
+  });
+  const [profileImageFiles, setProfileImageFiles] = useState({});
+  const [profileVideoFiles, setProfileVideoFiles] = useState({});
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  
+  // Assignment state
+  const [assignments, setAssignments] = useState([]);
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
+  const [assignmentFormData, setAssignmentFormData] = useState({
+    tvName: "",
+    profileId: ""
+  });
+
+  // Fetch profiles and assignments on mount
+  useEffect(() => {
+    fetchProfiles();
+    fetchAssignments();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchProfiles = useCallback(async () => {
+    setIsLoadingProfiles(true);
+    try {
+      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles");
+      const data = await response.json();
+      setProfiles(data);
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
+      setProfileSubmissionMessage(`Error fetching profiles: ${error.message}`);
+    } finally {
+      setIsLoadingProfiles(false);
+    }
+  }, []);
+
+  const fetchAssignments = useCallback(async () => {
+    setIsLoadingAssignments(true);
+    try {
+      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assignments");
+      const data = await response.json();
+      setAssignments(data);
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    } finally {
+      setIsLoadingAssignments(false);
+    }
+  }, []);
+
+  // Profile form handlers
+  const handleProfileInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setProfileFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+
+  // Profile scheduling handlers
+  const handleProfileImmediateToggle = useCallback((isImmediate) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      isImmediate,
+      timeSchedules: isImmediate ? [] : prev.timeSchedules
+    }));
+  }, []);
+
+  const handleAddProfileTimeSchedule = useCallback(() => {
+    if (!profileFormData.startTime || !profileFormData.endTime) {
+      setProfileSubmissionMessage("Please set both start and end times before adding to schedule list");
+      return;
+    }
+
+    const startDate = new Date(profileFormData.startTime);
+    const endDate = new Date(profileFormData.endTime);
+
+    if (startDate >= endDate) {
+      setProfileSubmissionMessage("Start time must be before end time");
+      return;
+    }
+
+    const newSchedule = {
+      startTime: profileFormData.startTime,
+      endTime: profileFormData.endTime,
+      id: Date.now() // Temporary ID for frontend management
+    };
+
+    setProfileFormData(prev => ({
+      ...prev,
+      timeSchedules: [...prev.timeSchedules, newSchedule],
+      startTime: getCurrentDateTime(),
+      endTime: getCurrentDateTime()
+    }));
+
+    setProfileSubmissionMessage("Time schedule added successfully! Add more or submit to create profile.");
+  }, [profileFormData.startTime, profileFormData.endTime]);
+
+  const handleRemoveProfileTimeSchedule = useCallback((scheduleId) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      timeSchedules: prev.timeSchedules.filter(schedule => schedule.id !== scheduleId)
+    }));
+  }, []);
+
+  const handleSetProfileCurrentTime = useCallback(() => {
+    const currentTime = getCurrentDateTime();
+    setProfileFormData(prev => ({
+      ...prev,
+      startTime: currentTime,
+      endTime: currentTime,
+      isImmediate: false
+    }));
+  }, []);
+
+  const handleSlideInputChange = useCallback((slideIndex, field, value) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      slides: prev.slides.map((slide, index) => 
+        index === slideIndex ? { ...slide, [field]: value } : slide
+      )
+    }));
+  }, []);
+
+  const handleSlideContentTypeChange = useCallback((slideIndex, contentType) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      slides: prev.slides.map((slide, index) => 
+        index === slideIndex ? {
+          ...slide,
+          contentType,
+          content: "",
+          imageUrls: [],
+          videoUrls: []
+        } : slide
+      )
+    }));
+    
+    // Clear any uploaded files for this slide
+    setProfileImageFiles(prev => ({
+      ...prev,
+      [slideIndex]: []
+    }));
+    setProfileVideoFiles(prev => ({
+      ...prev,
+      [slideIndex]: []
+    }));
+  }, []);
+
+  const addSlide = useCallback(() => {
+    if (profileFormData.slides.length < 3) {
+      setProfileFormData(prev => ({
+        ...prev,
+        slides: [...prev.slides, {
+          id: prev.slides.length + 1,
+          title: "",
+          description: "",
+          contentType: "TEXT",
+          content: "",
+          imageUrls: [],
+          videoUrls: [],
+          durationSeconds: 10,
+          active: true
+        }]
+      }));
+    }
+  }, [profileFormData.slides.length]);
+
+  const removeSlide = useCallback((slideIndex) => {
+    if (profileFormData.slides.length > 1) {
+      setProfileFormData(prev => ({
+        ...prev,
+        slides: prev.slides.filter((_, index) => index !== slideIndex)
+      }));
+      
+      // Clear files for removed slide
+      setProfileImageFiles(prev => {
+        const newFiles = { ...prev };
+        delete newFiles[slideIndex];
+        return newFiles;
+      });
+      setProfileVideoFiles(prev => {
+        const newFiles = { ...prev };
+        delete newFiles[slideIndex];
+        return newFiles;
+      });
+    }
+  }, [profileFormData.slides.length]);
+
+  const handleSlideFileUpload = useCallback(async (slideIndex, files, fileType) => {
+    if (!files || files.length === 0) return;
+
+    const maxSize = fileType === 'image' ? MAX_BASE64_SIZE_IMAGES : MAX_BASE64_SIZE_VIDEOS;
+    const validFiles = Array.from(files).filter(file => file.size <= maxSize);
+    
+    if (validFiles.length !== files.length) {
+      setProfileSubmissionMessage(`Some files were too large and skipped. Max size: ${Math.floor(maxSize / (1024 * 1024))}MB`);
+    }
+
+    try {
+      const filePromises = validFiles.map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const fileDataUrls = await Promise.all(filePromises);
+      
+      if (fileType === 'image') {
+        setProfileImageFiles(prev => ({
+          ...prev,
+          [slideIndex]: validFiles
+        }));
+        
+        setProfileFormData(prev => ({
+          ...prev,
+          slides: prev.slides.map((slide, index) => 
+            index === slideIndex ? { ...slide, imageUrls: fileDataUrls } : slide
+          )
+        }));
+      } else {
+        setProfileVideoFiles(prev => ({
+          ...prev,
+          [slideIndex]: validFiles
+        }));
+        
+        setProfileFormData(prev => ({
+          ...prev,
+          slides: prev.slides.map((slide, index) => 
+            index === slideIndex ? { ...slide, videoUrls: fileDataUrls } : slide
+          )
+        }));
+      }
+    } catch (error) {
+      console.error("Error processing files:", error);
+      setProfileSubmissionMessage("Error processing files");
+    }
+  }, []);
+
+  const handleRemoveSlideFile = useCallback((slideIndex, fileIndex, fileType) => {
+    if (fileType === 'image') {
+      setProfileImageFiles(prev => ({
+        ...prev,
+        [slideIndex]: prev[slideIndex]?.filter((_, index) => index !== fileIndex) || []
+      }));
+      
+      setProfileFormData(prev => ({
+        ...prev,
+        slides: prev.slides.map((slide, index) => 
+          index === slideIndex ? {
+            ...slide,
+            imageUrls: slide.imageUrls.filter((_, idx) => idx !== fileIndex)
+          } : slide
+        )
+      }));
+    } else {
+      setProfileVideoFiles(prev => ({
+        ...prev,
+        [slideIndex]: prev[slideIndex]?.filter((_, index) => index !== fileIndex) || []
+      }));
+      
+      setProfileFormData(prev => ({
+        ...prev,
+        slides: prev.slides.map((slide, index) => 
+          index === slideIndex ? {
+            ...slide,
+            videoUrls: slide.videoUrls.filter((_, idx) => idx !== fileIndex)
+          } : slide
+        )
+      }));
+    }
+  }, []);
+
+  const handleSubmitProfile = useCallback(async (e) => {
+    e.preventDefault();
+    setIsSubmittingProfile(true);
+    setProfileSubmissionMessage("");
+
+    try {
+      // Validate form
+      if (!profileFormData.name.trim()) {
+        throw new Error("Profile name is required");
+      }
+
+      if (profileFormData.slides.length === 0) {
+        throw new Error("At least one slide is required");
+      }
+
+      // Validate scheduling
+      if (!profileFormData.isImmediate && profileFormData.timeSchedules.length === 0) {
+        throw new Error("For scheduled profiles, please add at least one time schedule");
+      }
+
+      // Validate each time schedule
+      if (!profileFormData.isImmediate) {
+        for (let i = 0; i < profileFormData.timeSchedules.length; i++) {
+          const schedule = profileFormData.timeSchedules[i];
+          const startDate = new Date(schedule.startTime);
+          const endDate = new Date(schedule.endTime);
+
+          if (startDate >= endDate) {
+            throw new Error(`Time schedule ${i + 1}: Start time must be before end time`);
+          }
+        }
+      }
+
+      // Validate each slide
+      for (let i = 0; i < profileFormData.slides.length; i++) {
+        const slide = profileFormData.slides[i];
+        if (!slide.title.trim()) {
+          throw new Error(`Slide ${i + 1}: Title is required`);
+        }
+
+        if (slide.contentType === "TEXT" && !slide.content.trim()) {
+          throw new Error(`Slide ${i + 1}: Text content is required`);
+        }
+
+        if (slide.contentType === "EMBED" && !slide.content.trim()) {
+          throw new Error(`Slide ${i + 1}: Embed content is required`);
+        }
+
+        if (slide.contentType.startsWith("IMAGE_") && slide.imageUrls.length === 0) {
+          throw new Error(`Slide ${i + 1}: At least one image is required`);
+        }
+
+        if (slide.contentType === "VIDEO" && slide.videoUrls.length === 0) {
+          throw new Error(`Slide ${i + 1}: A video is required`);
+        }
+      }
+
+      // Prepare submission data
+      const submissionData = {
+        name: profileFormData.name.trim(),
+        description: profileFormData.description.trim(),
+        isImmediate: profileFormData.isImmediate,
+        timeSchedules: profileFormData.timeSchedules.map(schedule => ({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime
+        })),
+        slides: profileFormData.slides.map((slide, index) => ({
+          slideOrder: index + 1,
+          title: slide.title.trim(),
+          description: slide.description.trim(),
+          contentType: slide.contentType,
+          content: slide.content.trim(),
+          imageUrls: slide.imageUrls,
+          videoUrls: slide.videoUrls,
+          durationSeconds: slide.durationSeconds,
+          active: slide.active
+        }))
+      };
+
+      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles", {
+        method: "POST",
+        body: JSON.stringify(submissionData)
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || `HTTP ${response.status}`);
+      }
+
+      setProfileSubmissionMessage("Profile created successfully!");
+      
+      // Reset form
+      setProfileFormData({
+        name: "",
+        description: "",
+        isImmediate: true,
+        timeSchedules: [],
+        slides: [{
+          id: 1,
+          title: "",
+          description: "",
+          contentType: "TEXT",
+          content: "",
+          imageUrls: [],
+          videoUrls: [],
+          durationSeconds: 10,
+          active: true
+        }]
+      });
+      setProfileImageFiles({});
+      setProfileVideoFiles({});
+      setShowProfileForm(false);
+
+      // Refresh profiles
+      fetchProfiles();
+
+    } catch (error) {
+      console.error("Error creating profile:", error);
+      setProfileSubmissionMessage(`Error: ${error.message}`);
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  }, [profileFormData, fetchProfiles]);
+
+  const handleDeleteProfile = useCallback(async (profileId) => {
+    if (!window.confirm("Are you sure you want to delete this profile?")) return;
+
+    try {
+      const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/${profileId}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      setProfileSubmissionMessage("Profile deleted successfully!");
+      fetchProfiles();
+      fetchAssignments(); // Refresh assignments as they might be affected
+    } catch (error) {
+      console.error("Error deleting profile:", error);
+      setProfileSubmissionMessage(`Error deleting profile: ${error.message}`);
+    }
+  }, [fetchProfiles, fetchAssignments]);
+
+  // Assignment handlers
+  const handleAssignmentInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setAssignmentFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+
+  const handleSubmitAssignment = useCallback(async (e) => {
+    e.preventDefault();
+
+    try {
+      if (!assignmentFormData.tvName || !assignmentFormData.profileId) {
+        throw new Error("Please select both a TV and a profile");
+      }
+
+      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assign", {
+        method: "POST",
+        body: JSON.stringify({
+          tvName: assignmentFormData.tvName,
+          profileId: parseInt(assignmentFormData.profileId)
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || `HTTP ${response.status}`);
+      }
+
+      setProfileSubmissionMessage("Profile assigned successfully!");
+      setAssignmentFormData({ tvName: "", profileId: "" });
+      setShowAssignmentForm(false);
+      fetchAssignments();
+
+    } catch (error) {
+      console.error("Error assigning profile:", error);
+      setProfileSubmissionMessage(`Error: ${error.message}`);
+    }
+  }, [assignmentFormData, fetchAssignments]);
+
+  const handleUnassignProfile = useCallback(async (assignmentId) => {
+    if (!window.confirm("Are you sure you want to unassign this profile?")) return;
+
+    try {
+      const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/assignments/${assignmentId}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      setProfileSubmissionMessage("Profile unassigned successfully!");
+      fetchAssignments();
+    } catch (error) {
+      console.error("Error unassigning profile:", error);
+      setProfileSubmissionMessage(`Error: ${error.message}`);
+    }
+  }, [fetchAssignments]);
+
+  return (
+    <div className="profiles-tab">
+      <div className="profiles-header">
+        <h2>TV Profile Management</h2>
+        <p className="profiles-subtitle">
+          Create custom profiles with up to 3 slides and assign them to TVs
+        </p>
+      </div>
+
+      {profileSubmissionMessage && (
+        <div className={`submission-message ${profileSubmissionMessage.startsWith("Error") ? "error" : "success"}`}>
+          {profileSubmissionMessage}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="profiles-actions">
+        <button
+          className="action-btn create-profile-btn"
+          onClick={() => setShowProfileForm(!showProfileForm)}
+        >
+          <span className="btn-icon">➕</span>
+          {showProfileForm ? "Cancel" : "Create New Profile"}
+        </button>
+        <button
+          className="action-btn assign-profile-btn"
+          onClick={() => setShowAssignmentForm(!showAssignmentForm)}
+        >
+          <span className="btn-icon">📺</span>
+          {showAssignmentForm ? "Cancel" : "Assign Profile to TV"}
+        </button>
+      </div>
+
+      {/* Create Profile Form */}
+      {showProfileForm && (
+        <div className="profile-form-container">
+          <form className="profile-form" onSubmit={handleSubmitProfile}>
+            <h3>Create New Profile</h3>
+            
+            {/* Basic Information */}
+            <div className="form-section">
+              <h4>Basic Information</h4>
+              <div className="form-group">
+                <label className="form-label">Profile Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={profileFormData.name}
+                  onChange={handleProfileInputChange}
+                  className="form-input"
+                  placeholder="Enter profile name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea
+                  name="description"
+                  value={profileFormData.description}
+                  onChange={handleProfileInputChange}
+                  className="form-textarea"
+                  placeholder="Enter profile description (optional)"
+                  rows="2"
+                />
+              </div>
+            </div>
+
+            {/* Profile Scheduling */}
+            <div className="form-section">
+              <h4>Profile Scheduling</h4>
+              <p className="form-help">
+                Choose whether this profile should be active immediately or only during specific time slots.
+              </p>
+
+              {/* Immediate vs Scheduled Toggle */}
+              <div className="schedule-type-selector">
+                <label className={`schedule-type-option ${profileFormData.isImmediate ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="profileScheduleType"
+                    checked={profileFormData.isImmediate}
+                    onChange={() => handleProfileImmediateToggle(true)}
+                  />
+                  <span>📅 Immediate Profile</span>
+                  <small>Active immediately when assigned to TV</small>
+                </label>
+                <label className={`schedule-type-option ${!profileFormData.isImmediate ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="profileScheduleType"
+                    checked={!profileFormData.isImmediate}
+                    onChange={() => handleProfileImmediateToggle(false)}
+                  />
+                  <span>⏰ Scheduled Profile</span>
+                  <small>Active only during specific time slots</small>
+                </label>
+              </div>
+
+              {!profileFormData.isImmediate && (
+                <div className="schedule-management">
+                  <h4>Time Schedules</h4>
+                  
+                  {/* Add New Schedule Form */}
+                  <div className="add-schedule-form">
+                    <div className="schedule-inputs">
+                      <div className="schedule-buttons">
+                        <button
+                          type="button"
+                          className="schedule-helper-btn current"
+                          onClick={handleSetProfileCurrentTime}
+                          title="Set current time as start point"
+                        >
+                          🕒 Use Current Time
+                        </button>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Start Time</label>
+                        <input
+                          type="datetime-local"
+                          name="startTime"
+                          value={profileFormData.startTime || ''}
+                          onChange={handleProfileInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">End Time</label>
+                        <input
+                          type="datetime-local"
+                          name="endTime"
+                          value={profileFormData.endTime || ''}
+                          onChange={handleProfileInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <button
+                          type="button"
+                          className="add-schedule-btn"
+                          onClick={handleAddProfileTimeSchedule}
+                        >
+                          ➕ Add Time Slot
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Display Added Schedules */}
+                  <TimeScheduleList
+                    timeSchedules={profileFormData.timeSchedules}
+                    onRemove={handleRemoveProfileTimeSchedule}
+                    formatDate={formatScheduleDate}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Slides */}
+            <div className="form-section">
+              <div className="slides-header">
+                <h4>Slides ({profileFormData.slides.length}/3)</h4>
+                {profileFormData.slides.length < 3 && (
+                  <button
+                    type="button"
+                    className="add-slide-btn"
+                    onClick={addSlide}
+                  >
+                    ➕ Add Slide
+                  </button>
+                )}
+              </div>
+
+              {profileFormData.slides.map((slide, slideIndex) => (
+                <div key={slide.id} className="slide-editor">
+                  <div className="slide-header">
+                    <h5>Slide {slideIndex + 1}</h5>
+                    {profileFormData.slides.length > 1 && (
+                      <button
+                        type="button"
+                        className="remove-slide-btn"
+                        onClick={() => removeSlide(slideIndex)}
+                      >
+                        🗑️ Remove
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="slide-content">
+                    <div className="form-group">
+                      <label className="form-label">Slide Title *</label>
+                      <input
+                        type="text"
+                        value={slide.title}
+                        onChange={(e) => handleSlideInputChange(slideIndex, 'title', e.target.value)}
+                        className="form-input"
+                        placeholder="Enter slide title"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Slide Description</label>
+                      <input
+                        type="text"
+                        value={slide.description}
+                        onChange={(e) => handleSlideInputChange(slideIndex, 'description', e.target.value)}
+                        className="form-input"
+                        placeholder="Enter slide description (optional)"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Content Type *</label>
+                      <div className="content-type-selector">
+                        {CONTENT_TYPES.map((type) => (
+                          <label
+                            key={type.value}
+                            className={`content-type-option ${slide.contentType === type.value ? "selected" : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`contentType-${slideIndex}`}
+                              value={type.value}
+                              checked={slide.contentType === type.value}
+                              onChange={() => handleSlideContentTypeChange(slideIndex, type.value)}
+                            />
+                            <div className="content-type-icon">
+                              {type.value === "IMAGE_QUAD" ? (
+                                <div className="quad-icon-grid">
+                                  <span>🖼️</span>
+                                  <span>🖼️</span>
+                                  <span>🖼️</span>
+                                  <span>🖼️</span>
+                                </div>
+                              ) : (
+                                type.icon
+                              )}
+                            </div>
+                            <span>{type.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Content based on type */}
+                    {slide.contentType === "TEXT" && (
+                      <div className="form-group">
+                        <label className="form-label">Text Content *</label>
+                        <textarea
+                          value={slide.content}
+                          onChange={(e) => handleSlideInputChange(slideIndex, 'content', e.target.value)}
+                          className="form-textarea"
+                          placeholder="Enter your text content here..."
+                          rows="4"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {slide.contentType === "EMBED" && (
+                      <div className="form-group">
+                        <label className="form-label">Embed HTML/Code *</label>
+                        <textarea
+                          value={slide.content}
+                          onChange={(e) => handleSlideInputChange(slideIndex, 'content', e.target.value)}
+                          className="embed-textarea"
+                          placeholder="Enter HTML, iframe, or other embed code..."
+                          rows="6"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {slide.contentType.startsWith("IMAGE_") && (
+                      <div className="file-upload-container">
+                        <label className="file-upload-label">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple={true}
+                            onChange={(e) => handleSlideFileUpload(slideIndex, e.target.files, 'image')}
+                            className="file-input"
+                          />
+                          <div className="upload-icon">📁</div>
+                          <div>
+                            <strong>Choose Images</strong>
+                            <div className="upload-help">
+                              {slide.contentType === "IMAGE_SINGLE" && "Upload multiple images - they will rotate every 5 seconds"}
+                              {slide.contentType === "IMAGE_DUAL" && "Upload images in sets of 2 - each pair will rotate every 5 seconds"}
+                              {slide.contentType === "IMAGE_QUAD" && "Upload images in sets of 4 - each group will rotate every 5 seconds"}
+                            </div>
+                          </div>
+                        </label>
+
+                        {profileImageFiles[slideIndex]?.length > 0 && (
+                          <div className="selected-files">
+                            {profileImageFiles[slideIndex].map((file, fileIndex) => (
+                              <div key={fileIndex} className="selected-file">
+                                <button
+                                  type="button"
+                                  className="remove-image-btn"
+                                  onClick={() => handleRemoveSlideFile(slideIndex, fileIndex, 'image')}
+                                  title="Remove this image"
+                                >
+                                  ✕
+                                </button>
+                                <span className="file-name" title={file.name}>{truncateFileName(file.name)}</span>
+                                {slide.imageUrls[fileIndex] && (
+                                  <img
+                                    src={slide.imageUrls[fileIndex]}
+                                    alt={file.name}
+                                    className="upload-file-thumbnail"
+                                    loading="lazy"
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {slide.contentType === "VIDEO" && (
+                      <div className="file-upload-container">
+                        <label className="file-upload-label">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => handleSlideFileUpload(slideIndex, e.target.files, 'video')}
+                            className="file-input"
+                          />
+                          <div className="upload-icon">🎥</div>
+                          <div>
+                            <strong>Choose Video</strong>
+                            <div className="upload-help">
+                              Select 1 video file (MP4, WebM, OGG)
+                            </div>
+                          </div>
+                        </label>
+
+                        {profileVideoFiles[slideIndex]?.length > 0 && (
+                          <div className="selected-files">
+                            {profileVideoFiles[slideIndex].map((file, fileIndex) => (
+                              <div key={fileIndex} className="selected-file">
+                                <button
+                                  type="button"
+                                  className="remove-image-btn"
+                                  onClick={() => handleRemoveSlideFile(slideIndex, fileIndex, 'video')}
+                                  title="Remove this video"
+                                >
+                                  ✕
+                                </button>
+                                <span className="file-name" title={file.name}>{truncateFileName(file.name)}</span>
+                                {slide.videoUrls[fileIndex] && (
+                                  <video
+                                    src={slide.videoUrls[fileIndex]}
+                                    className="upload-file-thumbnail"
+                                    controls
+                                    style={{ maxWidth: "200px", maxHeight: "150px" }}
+                                    preload="metadata"
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label className="form-label">Duration (seconds)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={slide.durationSeconds}
+                        onChange={(e) => handleSlideInputChange(slideIndex, 'durationSeconds', parseInt(e.target.value) || 10)}
+                        className="form-input duration-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="admin-submit-btn"
+                disabled={isSubmittingProfile}
+              >
+                {isSubmittingProfile ? "Creating Profile..." : "Create Profile"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Assignment Form */}
+      {showAssignmentForm && (
+        <div className="assignment-form-container">
+          <form className="assignment-form" onSubmit={handleSubmitAssignment}>
+            <h3>Assign Profile to TV</h3>
+            
+            <div className="form-group">
+              <label className="form-label">Select TV *</label>
+              <select
+                name="tvName"
+                value={assignmentFormData.tvName}
+                onChange={handleAssignmentInputChange}
+                className="form-select"
+                required
+              >
+                <option value="">Choose a TV...</option>
+                {TV_OPTIONS.map((tv) => (
+                  <option key={tv.value} value={tv.value}>
+                    {tv.icon} {tv.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Select Profile *</label>
+              <select
+                name="profileId"
+                value={assignmentFormData.profileId}
+                onChange={handleAssignmentInputChange}
+                className="form-select"
+                required
+              >
+                <option value="">Choose a profile...</option>
+                {profiles.filter(profile => profile.active).map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} ({profile.slides?.length || 0} slides)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="admin-submit-btn">
+                Assign Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Existing Profiles */}
+      <div className="profiles-section">
+        <h3>Existing Profiles</h3>
+        {isLoadingProfiles ? (
+          <div className="loading-message">Loading profiles...</div>
+        ) : profiles.length === 0 ? (
+          <div className="no-content">
+            <div className="empty-icon">👥</div>
+            <span>No profiles found. Create your first profile above.</span>
+          </div>
+        ) : (
+          <div className="profiles-list">
+            {profiles.map((profile) => (
+              <div key={profile.id} className={`profile-card ${!profile.active ? "inactive" : ""}`}>
+                <div className="profile-header">
+                  <h4>{profile.name}</h4>
+                  <div className="profile-actions">
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDeleteProfile(profile.id)}
+                      title="Delete Profile"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="profile-details">
+                  {profile.description && (
+                    <p><strong>Description:</strong> {profile.description}</p>
+                  )}
+                  <p><strong>Slides:</strong> {profile.slides?.length || 0}</p>
+                  
+                  {/* Profile scheduling information */}
+                  <div className="profile-schedule-info">
+                    {profile.isImmediate ? (
+                      <p><strong>Scheduling:</strong> <span className="schedule-immediate">📅 Immediate (Always Active)</span></p>
+                    ) : (
+                      <div>
+                        <p><strong>Scheduling:</strong> <span className="schedule-timed">⏰ Scheduled ({profile.timeSchedules?.length || 0} time slot{profile.timeSchedules?.length !== 1 ? 's' : ''})</span></p>
+                        {profile.timeSchedules?.length > 0 && (
+                          <div className="profile-schedules-preview">
+                            <div className="schedules-list-compact">
+                              {profile.timeSchedules.slice(0, 2).map((schedule, index) => (
+                                <div key={index} className="schedule-item-compact">
+                                  <span className="schedule-time-compact">
+                                    {formatScheduleDate(schedule.startTime)} → {formatScheduleDate(schedule.endTime)}
+                                  </span>
+                                </div>
+                              ))}
+                              {profile.timeSchedules.length > 2 && (
+                                <div className="schedule-item-more">
+                                  +{profile.timeSchedules.length - 2} more time slot{profile.timeSchedules.length - 2 !== 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {profile.slides?.length > 0 && (
+                    <div className="slides-preview">
+                      <strong>Slides:</strong>
+                      <div className="slides-list">
+                        {profile.slides.map((slide, index) => (
+                          <div key={slide.id || index} className="slide-preview">
+                            <div className="slide-info">
+                              <span className="slide-number">Slide {slide.slideOrder || index + 1}</span>
+                              <span className="slide-title">{slide.title}</span>
+                              <span className="slide-type">{slide.contentType}</span>
+                              <span className="slide-duration">{slide.durationSeconds}s</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Current Assignments */}
+      <div className="assignments-section">
+        <h3>Current TV Assignments</h3>
+        {isLoadingAssignments ? (
+          <div className="loading-message">Loading assignments...</div>
+        ) : assignments.length === 0 ? (
+          <div className="no-content">
+            <div className="empty-icon">📺</div>
+            <span>No profiles are currently assigned to TVs.</span>
+          </div>
+        ) : (
+          <div className="assignments-list">
+            {assignments.map((assignment) => (
+              <div key={assignment.id} className="assignment-card">
+                <div className="assignment-info">
+                  <div className="tv-info">
+                    <span className="tv-icon">📺</span>
+                    <span className="tv-name">{assignment.tvName}</span>
+                  </div>
+                  <div className="assignment-arrow">→</div>
+                  <div className="profile-info">
+                    <span className="profile-name">{assignment.profile?.name}</span>
+                    <span className="profile-slides">({assignment.profile?.slides?.length || 0} slides)</span>
+                  </div>
+                </div>
+                <button
+                  className="unassign-btn"
+                  onClick={() => handleUnassignProfile(assignment.id)}
+                  title="Unassign Profile"
+                >
+                  ✕ Unassign
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+export default TVProfilesTab;
