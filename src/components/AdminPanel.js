@@ -125,6 +125,8 @@ const TVProfilesTab = React.memo(() => {
   const [profileFormData, setProfileFormData] = useState({
     name: "",
     description: "",
+    isImmediate: true, // Default to immediate
+    timeSchedules: [], // Array of time schedules
     slides: [
       {
         id: 1,
@@ -191,6 +193,68 @@ const TVProfilesTab = React.memo(() => {
     setProfileFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  }, []);
+
+  // Profile scheduling handlers
+  const handleProfileImmediateToggle = useCallback((isImmediate) => {
+    setProfileFormData(prev => ({
+      ...prev,
+      isImmediate,
+      timeSchedules: isImmediate ? [] : prev.timeSchedules
+    }));
+  }, []);
+
+  const handleAddProfileTimeSchedule = useCallback(() => {
+    if (!profileFormData.startTime || !profileFormData.endTime) {
+      setProfileSubmissionMessage("Please set both start and end times before adding to schedule list");
+      return;
+    }
+
+    const startDate = new Date(profileFormData.startTime);
+    const endDate = new Date(profileFormData.endTime);
+
+    if (startDate >= endDate) {
+      setProfileSubmissionMessage("Start time must be before end time");
+      return;
+    }
+
+    const newSchedule = {
+      startTime: profileFormData.startTime,
+      endTime: profileFormData.endTime,
+      id: Date.now() // Temporary ID for frontend management
+    };
+
+    setProfileFormData(prev => ({
+      ...prev,
+      timeSchedules: [...prev.timeSchedules, newSchedule],
+      startTime: getCurrentDateTime(),
+      endTime: getCurrentDateTime(),
+      isImmediate: false // Automatically switch to scheduled mode when adding time schedules
+    }));
+
+    setProfileSubmissionMessage("Time schedule added successfully! Profile automatically switched to scheduled mode.");
+  }, [profileFormData.startTime, profileFormData.endTime]);
+
+  const handleRemoveProfileTimeSchedule = useCallback((scheduleId) => {
+    setProfileFormData(prev => {
+      const newTimeSchedules = prev.timeSchedules.filter(schedule => schedule.id !== scheduleId);
+      return {
+        ...prev,
+        timeSchedules: newTimeSchedules,
+        // If no more schedules, optionally switch back to immediate mode
+        // isImmediate: newTimeSchedules.length === 0 ? true : prev.isImmediate
+      };
+    });
+  }, []);
+
+  const handleSetProfileCurrentTime = useCallback(() => {
+    const currentTime = getCurrentDateTime();
+    setProfileFormData(prev => ({
+      ...prev,
+      startTime: currentTime,
+      endTime: currentTime,
+      isImmediate: false
     }));
   }, []);
 
@@ -369,6 +433,41 @@ const TVProfilesTab = React.memo(() => {
         throw new Error("At least one slide is required");
       }
 
+      // Validate scheduling
+      if (!profileFormData.isImmediate && profileFormData.timeSchedules.length === 0) {
+        throw new Error("For scheduled profiles, please add at least one time schedule");
+      }
+
+      // Debug logging
+      console.log("=== Profile Form Submission Debug ===");
+      console.log("Profile form data isImmediate:", profileFormData.isImmediate);
+      console.log("Profile form data timeSchedules count:", profileFormData.timeSchedules.length);
+      console.log("Profile form data timeSchedules:", profileFormData.timeSchedules);
+      
+      // Auto-fix inconsistent scheduling state
+      let finalIsImmediate = profileFormData.isImmediate;
+      if (profileFormData.timeSchedules.length > 0 && profileFormData.isImmediate) {
+        // If there are time schedules but profile is marked as immediate, switch to scheduled
+        finalIsImmediate = false;
+        console.log("AUTO-CORRECTING: Profile has time schedules, setting isImmediate to false");
+      }
+      
+      console.log("Final isImmediate value:", finalIsImmediate);
+      console.log("=======================================");
+
+      // Validate each time schedule
+      if (!profileFormData.isImmediate) {
+        for (let i = 0; i < profileFormData.timeSchedules.length; i++) {
+          const schedule = profileFormData.timeSchedules[i];
+          const startDate = new Date(schedule.startTime);
+          const endDate = new Date(schedule.endTime);
+
+          if (startDate >= endDate) {
+            throw new Error(`Time schedule ${i + 1}: Start time must be before end time`);
+          }
+        }
+      }
+
       // Validate each slide
       for (let i = 0; i < profileFormData.slides.length; i++) {
         const slide = profileFormData.slides[i];
@@ -397,6 +496,11 @@ const TVProfilesTab = React.memo(() => {
       const submissionData = {
         name: profileFormData.name.trim(),
         description: profileFormData.description.trim(),
+        isImmediate: finalIsImmediate, // Use the corrected value
+        timeSchedules: profileFormData.timeSchedules.map(schedule => ({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime
+        })),
         slides: profileFormData.slides.map((slide, index) => ({
           slideOrder: index + 1,
           title: slide.title.trim(),
@@ -410,6 +514,9 @@ const TVProfilesTab = React.memo(() => {
         }))
       };
 
+      console.log("=== Submitting Profile Data ===");
+      console.log("Submission data:", JSON.stringify(submissionData, null, 2));
+
       const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles", {
         method: "POST",
         body: JSON.stringify(submissionData)
@@ -420,12 +527,18 @@ const TVProfilesTab = React.memo(() => {
         throw new Error(error || `HTTP ${response.status}`);
       }
 
+      const createdProfile = await response.json();
+      console.log("Profile created successfully:", createdProfile);
+      console.log("Created profile isImmediate:", createdProfile.isImmediate);
+
       setProfileSubmissionMessage("Profile created successfully!");
       
       // Reset form
       setProfileFormData({
         name: "",
         description: "",
+        isImmediate: true,
+        timeSchedules: [],
         slides: [{
           id: 1,
           title: "",
@@ -535,6 +648,28 @@ const TVProfilesTab = React.memo(() => {
     }
   }, [fetchAssignments]);
 
+  // Fix scheduling inconsistencies
+  const handleFixSchedulingInconsistencies = useCallback(async () => {
+    try {
+      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/fix-scheduling", {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      setProfileSubmissionMessage(result.message || "Scheduling inconsistencies fixed!");
+      
+      // Refresh profiles to see the updated data
+      fetchProfiles();
+    } catch (error) {
+      console.error("Error fixing scheduling inconsistencies:", error);
+      setProfileSubmissionMessage(`Error: ${error.message}`);
+    }
+  }, [fetchProfiles]);
+
   return (
     <div className="profiles-tab">
       <div className="profiles-header">
@@ -565,6 +700,14 @@ const TVProfilesTab = React.memo(() => {
         >
           <span className="btn-icon">📺</span>
           {showAssignmentForm ? "Cancel" : "Assign Profile to TV"}
+        </button>
+        <button
+          className="action-btn fix-scheduling-btn"
+          onClick={handleFixSchedulingInconsistencies}
+          title="Fix profiles that have schedules but are marked as immediate"
+        >
+          <span className="btn-icon">🔧</span>
+          Fix Scheduling Issues
         </button>
       </div>
 
@@ -600,6 +743,99 @@ const TVProfilesTab = React.memo(() => {
                   rows="2"
                 />
               </div>
+            </div>
+
+            {/* Profile Scheduling */}
+            <div className="form-section">
+              <h4>Profile Scheduling</h4>
+              <p className="form-help">
+                Choose whether this profile should be active immediately or only during specific time slots.
+              </p>
+
+              {/* Immediate vs Scheduled Toggle */}
+              <div className="schedule-type-selector">
+                <label className={`schedule-type-option ${profileFormData.isImmediate ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="profileScheduleType"
+                    checked={profileFormData.isImmediate}
+                    onChange={() => handleProfileImmediateToggle(true)}
+                  />
+                  <span>📅 Immediate Profile</span>
+                  <small>Active immediately when assigned to TV</small>
+                </label>
+                <label className={`schedule-type-option ${!profileFormData.isImmediate ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="profileScheduleType"
+                    checked={!profileFormData.isImmediate}
+                    onChange={() => handleProfileImmediateToggle(false)}
+                  />
+                  <span>⏰ Scheduled Profile</span>
+                  <small>Active only during specific time slots</small>
+                </label>
+              </div>
+
+              {!profileFormData.isImmediate && (
+                <div className="schedule-management">
+                  <h4>Time Schedules</h4>
+                  
+                  {/* Add New Schedule Form */}
+                  <div className="add-schedule-form">
+                    <div className="schedule-inputs">
+                      <div className="schedule-buttons">
+                        <button
+                          type="button"
+                          className="schedule-helper-btn current"
+                          onClick={handleSetProfileCurrentTime}
+                          title="Set current time as start point"
+                        >
+                          🕒 Use Current Time
+                        </button>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Start Time</label>
+                        <input
+                          type="datetime-local"
+                          name="startTime"
+                          value={profileFormData.startTime || ''}
+                          onChange={handleProfileInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">End Time</label>
+                        <input
+                          type="datetime-local"
+                          name="endTime"
+                          value={profileFormData.endTime || ''}
+                          onChange={handleProfileInputChange}
+                          className="form-input"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <button
+                          type="button"
+                          className="add-schedule-btn"
+                          onClick={handleAddProfileTimeSchedule}
+                        >
+                          ➕ Add Time Slot
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Display Added Schedules */}
+                  <TimeScheduleList
+                    timeSchedules={profileFormData.timeSchedules}
+                    onRemove={handleRemoveProfileTimeSchedule}
+                    formatDate={formatScheduleDate}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Slides */}
@@ -926,6 +1162,35 @@ const TVProfilesTab = React.memo(() => {
                     <p><strong>Description:</strong> {profile.description}</p>
                   )}
                   <p><strong>Slides:</strong> {profile.slides?.length || 0}</p>
+                  
+                  {/* Profile scheduling information */}
+                  <div className="profile-schedule-info">
+                    {profile.isImmediate ? (
+                      <p><strong>Scheduling:</strong> <span className="schedule-immediate">📅 Immediate (Always Active)</span></p>
+                    ) : (
+                      <div>
+                        <p><strong>Scheduling:</strong> <span className="schedule-timed">⏰ Scheduled ({profile.timeSchedules?.length || 0} time slot{profile.timeSchedules?.length !== 1 ? 's' : ''})</span></p>
+                        {profile.timeSchedules?.length > 0 && (
+                          <div className="profile-schedules-preview">
+                            <div className="schedules-list-compact">
+                              {profile.timeSchedules.slice(0, 2).map((schedule, index) => (
+                                <div key={index} className="schedule-item-compact">
+                                  <span className="schedule-time-compact">
+                                    {formatScheduleDate(schedule.startTime)} → {formatScheduleDate(schedule.endTime)}
+                                  </span>
+                                </div>
+                              ))}
+                              {profile.timeSchedules.length > 2 && (
+                                <div className="schedule-item-more">
+                                  +{profile.timeSchedules.length - 2} more time slot{profile.timeSchedules.length - 2 !== 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   
                   {profile.slides?.length > 0 && (
                     <div className="slides-preview">
