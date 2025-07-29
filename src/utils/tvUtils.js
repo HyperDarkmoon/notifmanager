@@ -241,16 +241,67 @@ export const renderProfileSlide = (
 ) => {
   if (!slide) return null;
 
+  // For image and video content, render full-screen like content tab
+  if (slide.contentType.startsWith("IMAGE_") || slide.contentType === "VIDEO") {
+    return (
+      <div className="tv-custom-display">
+        {slide.contentType.startsWith("IMAGE_") && slide.imageUrls && slide.imageUrls.length > 0 && (
+          <div className="custom-file">
+            {(() => {
+              const imagesPerSet = getImagesPerSetForContentType(slide.contentType);
+              const imageSets = getImageSetsFromUrls(slide.imageUrls, slide.contentType);
+              
+              // Use the current image set based on imageSetIndex
+              const currentSet = imageSets[imageSetIndex] || imageSets[0] || [];
+              
+              return (
+                <div className={`custom-file-image-grid grid-${imagesPerSet}`}>
+                  {currentSet.map((url, index) => (
+                    <div key={index} className="custom-file-image-container">
+                      <img
+                        src={url}
+                        alt={`Slide content ${index + 1}`}
+                        className="custom-content-image"
+                      />
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {slide.contentType === "VIDEO" && slide.videoUrls && slide.videoUrls.length > 0 && (
+          <div className="custom-file">
+            <video
+              src={slide.videoUrls[0]}
+              autoPlay
+              muted
+              playsInline
+              onPlay={onVideoStart}
+              onEnded={onVideoEnd}
+              onError={(e) => {
+                console.error("Profile video playback error:", e);
+                if (onVideoEnd) onVideoEnd();
+              }}
+              className="custom-content-video"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For text and embed content, use the original profile layout with header
   return (
     <div className="tv-profile-slide-display">
       <div className="profile-slide-content">
         {/* Slide Title - Only show for TEXT and EMBED content types */}
-        {(slide.contentType === "TEXT" || slide.contentType === "EMBED") && (
-          <div className="profile-slide-header">
-            <h2>{slide.title}</h2>
-            {slide.description && <p className="slide-description">{slide.description}</p>}
-          </div>
-        )}
+        <div className="profile-slide-header">
+          <h2>{slide.title}</h2>
+          {slide.description && <p className="slide-description">{slide.description}</p>}
+        </div>
 
         {/* Slide Content based on type */}
         <div className="profile-slide-main">
@@ -267,52 +318,6 @@ export const renderProfileSlide = (
               className="profile-embed-content"
               dangerouslySetInnerHTML={{ __html: slide.content }}
             />
-          )}
-
-          {slide.contentType.startsWith("IMAGE_") && slide.imageUrls && slide.imageUrls.length > 0 && (
-            <div className="profile-image-content">
-              {(() => {
-                const imagesPerSet = getImagesPerSetForContentType(slide.contentType);
-                const imageSets = getImageSetsFromUrls(slide.imageUrls, slide.contentType);
-                
-                // Use the current image set based on imageSetIndex
-                const currentSet = imageSets[imageSetIndex] || imageSets[0] || [];
-                
-                return (
-                  <div className={`profile-image-grid grid-${imagesPerSet}`}>
-                    {currentSet.map((url, index) => (
-                      <div key={index} className="profile-image-container">
-                        <img
-                          src={url}
-                          alt={`Slide content ${index + 1}`}
-                          className="profile-slide-image"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {slide.contentType === "VIDEO" && slide.videoUrls && slide.videoUrls.length > 0 && (
-            <div className="profile-video-content">
-              <div className="profile-video-container">
-                <video
-                  src={slide.videoUrls[0]}
-                  className="profile-slide-video"
-                  autoPlay
-                  playsInline
-                  onPlay={onVideoStart}
-                  onEnded={onVideoEnd}
-                  onError={(e) => {
-                    console.error("Profile video playback error:", e);
-                    if (onVideoEnd) onVideoEnd();
-                  }}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-            </div>
           )}
         </div>
       </div>
