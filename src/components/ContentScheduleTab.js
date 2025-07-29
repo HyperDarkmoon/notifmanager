@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate, getImagesPerSetForContentType } from "../utils/contentScheduleUtils";
-import { getInitialFormData, getCurrentDateTime, getCurrentTime, convertDailyTimeToDateTime, extractTimeFromDateTime, truncateFileName } from "../utils/adminUtils";
+import { getInitialFormData, getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
@@ -467,28 +467,40 @@ const ContentScheduleTab = React.memo(() => {
         submissionData.timeSchedules = [];
         submissionData.startTime = null;
         submissionData.endTime = null;
+        submissionData.isImmediate = true;
       } else if (formData.isDailySchedule) {
         // For daily schedules, create a special marker or flag
         submissionData.isDailySchedule = true;
         submissionData.dailyStartTime = formData.dailyStartTime;
         submissionData.dailyEndTime = formData.dailyEndTime;
         submissionData.timeSchedules = [];
+        submissionData.isImmediate = false;
         
-        // For backward compatibility, set startTime/endTime to today's schedule
-        const startDateTime = convertDailyTimeToDateTime(formData.dailyStartTime);
-        const endDateTime = convertDailyTimeToDateTime(formData.dailyEndTime);
-        submissionData.startTime = startDateTime;
-        submissionData.endTime = endDateTime;
+        // Don't set legacy startTime/endTime for daily schedules to avoid conflicts
+        submissionData.startTime = null;
+        submissionData.endTime = null;
       } else {
         submissionData.timeSchedules = formData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
           endTime: schedule.endTime
         }));
+        submissionData.isImmediate = false;
         if (formData.timeSchedules.length > 0) {
           submissionData.startTime = formData.timeSchedules[0].startTime;
           submissionData.endTime = formData.timeSchedules[0].endTime;
         }
       }
+
+      // Debug logging
+      console.log("=== DEBUG: Frontend submission data ===");
+      console.log("formData.isImmediate:", formData.isImmediate);
+      console.log("formData.isDailySchedule:", formData.isDailySchedule);
+      console.log("submissionData.isImmediate:", submissionData.isImmediate);
+      console.log("submissionData.isDailySchedule:", submissionData.isDailySchedule);
+      console.log("submissionData.dailyStartTime:", submissionData.dailyStartTime);
+      console.log("submissionData.dailyEndTime:", submissionData.dailyEndTime);
+      console.log("Full submissionData:", submissionData);
+      console.log("=== END DEBUG ===");
 
       const response = await makeAuthenticatedRequest(
         "http://localhost:8090/api/content/from-request",
@@ -1064,7 +1076,20 @@ const ContentScheduleTab = React.memo(() => {
                   </p>
                   
                   {/* Display time schedules */}
-                  {schedule.timeSchedules && schedule.timeSchedules.length > 0 ? (
+                  {schedule.isDailySchedule ? (
+                    <div className="schedule-times">
+                      <div className="daily-schedule-display">
+                        <strong>📅 Daily Schedule:</strong>
+                        <div className="daily-time-display">
+                          <span className="daily-time"><strong>From:</strong> {schedule.dailyStartTime}</span>
+                          <span className="daily-time"><strong>To:</strong> {schedule.dailyEndTime}</span>
+                        </div>
+                        <div className="daily-schedule-note">
+                          <em>Repeats daily during this time window</em>
+                        </div>
+                      </div>
+                    </div>
+                  ) : schedule.timeSchedules && schedule.timeSchedules.length > 0 ? (
                     <div className="schedule-times">
                       <strong>Scheduled Times ({schedule.timeSchedules.length} slot{schedule.timeSchedules.length > 1 ? 's' : ''}):</strong>
                       <div className="time-schedules-list">
@@ -1079,13 +1104,19 @@ const ContentScheduleTab = React.memo(() => {
                         ))}
                       </div>
                     </div>
-                  ) : (
+                  ) : schedule.startTime && schedule.endTime ? (
                     <div className="schedule-times">
                       <p>
                         <strong>Start:</strong> {formatDate(schedule.startTime)}
                       </p>
                       <p>
                         <strong>End:</strong> {formatDate(schedule.endTime)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="schedule-times">
+                      <p className="schedule-immediate">
+                        <strong>📅 Immediate Content</strong> - No time limit
                       </p>
                     </div>
                   )}

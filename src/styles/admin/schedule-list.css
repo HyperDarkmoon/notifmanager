@@ -154,6 +154,36 @@
   font-weight: bold;
 }
 
+/* Daily Schedule Display */
+.daily-schedule-display {
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+  border: 2px solid #4fd1c7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.daily-time-display {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.daily-time {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: #234e52;
+}
+
+.daily-schedule-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #2c7a7b;
+  font-style: italic;
+}
+
 /* Profile Scheduling Styles */
 .profile-schedule-info {
   margin: 1rem 0;
