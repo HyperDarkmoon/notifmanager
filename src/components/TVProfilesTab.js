@@ -523,14 +523,18 @@ const TVProfilesTab = React.memo(() => {
       const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/${profileId}`, {
         method: "DELETE"
       });
-
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       setProfileSubmissionMessage("Profile deleted and unassigned from all TVs successfully!");
-      fetchProfiles();
-      fetchAssignments(); // Refresh assignments as they were affected
+      
+      // Refresh profiles and assignments
+      await fetchProfiles();
+      await fetchAssignments();
+      
     } catch (error) {
       console.error("Error deleting profile:", error);
       setProfileSubmissionMessage(`Error deleting profile: ${error.message}`);
