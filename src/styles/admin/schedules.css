@@ -1,0 +1,259 @@
+/* Schedule Management Styles */
+.schedule-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.schedule-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.schedule-helper-btn {
+  padding: 0.75rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-helper-btn.clear {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+}
+
+.schedule-helper-btn.clear:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+}
+
+.schedule-helper-btn.current {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  color: white;
+}
+
+.schedule-helper-btn.current:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+}
+
+/* Schedule Type Selector */
+.schedule-type-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.schedule-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  text-align: center;
+}
+
+.schedule-type-option:hover {
+  border-color: #cbd5e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-type-option.selected {
+  border-color: #4299e1;
+  background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+}
+
+.schedule-type-option input[type="radio"] {
+  display: none;
+}
+
+.schedule-type-option span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.schedule-type-option small {
+  color: #718096;
+  font-size: 0.85rem;
+}
+
+/* Schedule Management */
+.schedule-management {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.schedule-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem 0;
+  position: relative;
+}
+
+.schedule-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #cbd5e0;
+}
+
+.schedule-divider span {
+  background: #f8fafc;
+  padding: 0 1rem;
+  color: #718096;
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 1;
+  position: relative;
+}
+
+.add-schedule-form {
+  margin-bottom: 1.5rem;
+}
+
+.add-schedule-btn {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.add-schedule-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+}
+
+/* Daily Schedule Styles */
+.daily-schedule-section {
+  margin-bottom: 1.5rem;
+}
+
+.daily-schedule-toggle {
+  margin-bottom: 1rem;
+}
+
+.daily-time-inputs {
+  background: #f0f9ff;
+  border: 2px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.daily-schedule-info {
+  margin-top: 1rem;
+}
+
+.daily-schedule-info .info-box {
+  background: #e0f2fe;
+  border: 2px solid #38bdf8;
+  border-radius: 8px;
+  padding: 1rem;
+  color: #0c4a6e;
+}
+
+.daily-schedule-info .info-box strong {
+  color: #075985;
+}
+
+/* Time Slots List */
+.scheduled-times-list {
+  margin-top: 1rem;
+}
+
+.scheduled-times-list h4 {
+  color: #2d3748;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.time-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.time-slot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.time-slot:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.time-slot-info {
+  flex: 1;
+}
+
+.time-slot-period {
+  margin-bottom: 0.25rem;
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+
+.time-slot-period strong {
+  color: #2d3748;
+}
+
+.remove-schedule-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.remove-schedule-btn:hover {
+  background: rgba(245, 101, 101, 0.1);
+  transform: scale(1.1);
+}
+
+.no-schedules-message {
+  text-align: center;
+  color: #718096;
+  font-style: italic;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px dashed #e2e8f0;
+}

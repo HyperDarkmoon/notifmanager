@@ -1,0 +1,79 @@
+/* Reset the global no-scroll styles for admin panel */
+body.admin-view {
+  overflow: hidden !important;
+  height: 100vh;
+}
+
+html.admin-mode {
+  overflow: hidden !important;
+  height: 100vh;
+}
+
+/* Hide sidebar completely in admin mode */
+body.admin-view .sidebar {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Ensure no sidebar-related margins or paddings affect admin layout */
+body.admin-view .main-content {
+  display: none !important;
+}
+
+/* Override any TV page styles that might interfere */
+body.admin-view .tv-page {
+  display: none !important;
+}
+
+/* Override base.css styles that add sidebar margins */
+body.admin-view .App {
+  padding-top: 0 !important;
+  margin-left: 0 !important;
+  --sidebar-width: 0px !important;
+  --main-margin-left: 0px !important;
+}
+
+body.admin-view main {
+  margin-left: 0 !important;
+}
+
+/* Ensure admin layout takes full width without sidebar interference */
+.admin-layout {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Override any CSS variables that might affect layout */
+body.admin-view {
+  --sidebar-width: 0px !important;
+  --main-margin-left: 0px !important;
+}
+
+/* Restore scrollbars for admin panel */
+.admin-view .admin-layout ::-webkit-scrollbar,
+.admin-main-content ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: #f1f1f1;
+  display: block;
+}
+
+.admin-view .admin-layout ::-webkit-scrollbar-thumb,
+.admin-main-content ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.admin-view .admin-layout ::-webkit-scrollbar-thumb:hover,
+.admin-main-content ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Ensure admin content fits properly */
+.admin-layout .admin-panel {
+  max-height: none;
+  height: auto;
+  min-height: calc(
+    100vh - 72px - 4rem
+  ); /* Full height minus navbar and padding */
+}

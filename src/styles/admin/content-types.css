@@ -1,0 +1,50 @@
+/* Content Type Selector */
+.content-type-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.content-type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 0; /* Allow shrinking */
+  justify-content: center;
+  text-align: center;
+}
+
+.content-type-option input[type="radio"] {
+  display: none;
+}
+
+.content-type-option .content-type-icon {
+  font-size: 1.5rem;
+}
+
+/* Quad icon grid for IMAGE_QUAD content type */
+.quad-icon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.content-type-option:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.content-type-option.selected {
+  border-color: #667eea;
+  background: #f0f5ff;
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.15);
+}

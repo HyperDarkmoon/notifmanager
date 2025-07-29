@@ -59,7 +59,21 @@ src/
 │   └── debugUser.js            # Development debugging utilities
 └── styles/              # CSS styling
     ├── base.css         # Base layout and utilities
-    ├── admin.css        # Admin panel styling
+    ├── admin.css # Main admin panel styles (imports modular files)
+    ├── admin/           # Modular admin styles directory
+    │   ├── base.css     # Admin base layout
+    │   ├── tabs.css     # Tab navigation
+    │   ├── forms.css    # Form styling
+    │   ├── tv-selectors.css # TV selection components
+    │   ├── content-types.css # Content type selectors
+    │   ├── file-upload.css # File upload components
+    │   ├── schedules.css # Schedule management
+    │   ├── schedule-list.css # Schedule display
+    │   ├── profiles.css # Profile management
+    │   ├── uploads.css  # Upload display
+    │   ├── embed.css    # Embed content styling
+    │   ├── responsive.css # Responsive design
+    │   └── overrides.css # Global overrides
     ├── auth.css         # Authentication forms styling
     ├── navbar.css       # Navigation bar styling
     ├── sidebar.css      # Sidebar navigation styling

@@ -1,0 +1,417 @@
+/* TV Profiles Tab Styles */
+.profiles-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.profiles-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.profiles-header h2 {
+  color: #2d3748;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.profiles-subtitle {
+  color: #718096;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.profiles-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.create-profile-btn {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+}
+
+.create-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
+}
+
+.assign-profile-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.assign-profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+/* Profile Form Container */
+.profile-form-container {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.profile-form h3 {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Slides Editor */
+.slides-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.slides-header h4 {
+  color: #2d3748;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.add-slide-btn {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-slide-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(66, 153, 225, 0.3);
+}
+
+.slide-editor {
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid #e2e8f0;
+}
+
+.slide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.slide-header h5 {
+  color: #2d3748;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.remove-slide-btn {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-slide-btn:hover {
+  background: #c53030;
+  transform: translateY(-1px);
+}
+
+.slide-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.duration-input {
+  max-width: 120px;
+}
+
+/* Assignment Form */
+.assignment-form-container {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.assignment-form h3 {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Profiles Section */
+.profiles-section {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.profiles-section h3 {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.profiles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.profile-card {
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-card.inactive {
+  opacity: 0.6;
+  border-color: #fed7d7;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.profile-header h4 {
+  color: #2d3748;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.delete-btn {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.delete-btn:hover {
+  background: #c53030;
+  transform: translateY(-1px);
+}
+
+.profile-details p {
+  margin: 0.5rem 0;
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+
+.slides-preview {
+  margin-top: 1rem;
+}
+
+.slides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.slide-preview {
+  background: white;
+  border-radius: 8px;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.slide-info {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.slide-number {
+  background: #667eea;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.slide-title {
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.slide-type {
+  background: #edf2f7;
+  color: #4a5568;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.slide-duration {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+/* Assignments Section */
+.assignments-section {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+}
+
+.assignments-section h3 {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.assignments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.assignment-card {
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.assignment-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.assignment-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tv-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tv-icon {
+  font-size: 1.5rem;
+}
+
+.tv-name {
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.assignment-arrow {
+  color: #667eea;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.profile-name {
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.profile-slides {
+  color: #718096;
+  font-size: 0.85rem;
+}
+
+.unassign-btn {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.unassign-btn:hover {
+  background: #c53030;
+  transform: translateY(-1px);
+}

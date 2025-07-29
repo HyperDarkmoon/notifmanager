@@ -1,0 +1,22 @@
+/* Embed Text */
+.embed-container {
+  width: 100%;
+}
+
+.embed-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 150px;
+  transition: all 0.3s ease;
+}
+
+.embed-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}

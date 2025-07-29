@@ -1,0 +1,176 @@
+/* File Upload */
+.file-upload-container {
+  margin-bottom: 1.5rem;
+}
+
+.file-upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f7fafc;
+}
+
+.file-upload-label:hover {
+  border-color: #667eea;
+  background: #f0f5ff;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-icon {
+  font-size: 2rem;
+}
+
+.upload-help {
+  color: #718096;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.selected-file:hover {
+  background: #f1f3f4;
+  border-color: #dee2e6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-name {
+  font-weight: 500;
+  color: #495057;
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+  cursor: help;
+  position: relative;
+}
+
+.file-name:hover {
+  color: #212529;
+}
+
+/* Tooltip for full filename on hover */
+.file-name::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #333;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+  transform: translateY(-5px);
+  max-width: 300px;
+  word-break: break-all;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.file-name:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.remove-file-btn,
+.remove-image-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+  flex-shrink: 0;
+}
+
+.remove-file-btn:hover,
+.remove-image-btn:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 107, 0.4);
+}
+
+.remove-file-btn:active,
+.remove-image-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+}
+
+.selected-files {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Image Thumbnail */
+.upload-file-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Multi-image upload styling */
+.upload-multi-images {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.multi-image-preview {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 200px;
+}
+
+.multi-image-preview img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+}

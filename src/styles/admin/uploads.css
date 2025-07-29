@@ -1,0 +1,77 @@
+/* Current Uploads Section */
+.current-uploads-section {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 265vh;
+  overflow-y: auto;
+}
+
+.current-uploads-section h2 {
+  color: #4a5568;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.uploads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.tv-upload-card {
+  background: #f7fafc;
+  border-radius: 10px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.tv-upload-card h3 {
+  text-align: center;
+  margin: 0 0 1rem 0;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.upload-content {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-file-info,
+.upload-embed-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.file-type-icon,
+.embed-type-icon {
+  font-size: 1.5rem;
+}
+
+.embed-preview {
+  font-family: monospace;
+  font-size: 0.85rem;
+  overflow-wrap: break-word;
+  max-width: 180px;
+}
+
+.no-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #a0aec0;
+}
+
+.empty-icon {
+  font-size: 1.5rem;
+}
