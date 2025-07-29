@@ -244,11 +244,13 @@ export const renderProfileSlide = (
   return (
     <div className="tv-profile-slide-display">
       <div className="profile-slide-content">
-        {/* Slide Title */}
-        <div className="profile-slide-header">
-          <h2>{slide.title}</h2>
-          {slide.description && <p className="slide-description">{slide.description}</p>}
-        </div>
+        {/* Slide Title - Only show for TEXT and EMBED content types */}
+        {(slide.contentType === "TEXT" || slide.contentType === "EMBED") && (
+          <div className="profile-slide-header">
+            <h2>{slide.title}</h2>
+            {slide.description && <p className="slide-description">{slide.description}</p>}
+          </div>
+        )}
 
         {/* Slide Content based on type */}
         <div className="profile-slide-main">

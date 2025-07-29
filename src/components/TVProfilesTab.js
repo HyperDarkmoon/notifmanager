@@ -197,7 +197,11 @@ const TVProfilesTab = React.memo(() => {
           contentType,
           content: "",
           imageUrls: [],
-          videoUrls: []
+          videoUrls: [],
+          // Auto-generate title for image and video content types
+          title: contentType.startsWith("IMAGE_") || contentType === "VIDEO" 
+            ? `${contentType.replace('_', ' ').toLowerCase()} slide ${slideIndex + 1}`
+            : slide.title
         } : slide
       )
     }));
@@ -391,8 +395,10 @@ const TVProfilesTab = React.memo(() => {
       // Validate each slide
       for (let i = 0; i < profileFormData.slides.length; i++) {
         const slide = profileFormData.slides[i];
-        if (!slide.title.trim()) {
-          throw new Error(`Slide ${i + 1}: Title is required`);
+        
+        // Only require title for TEXT content type
+        if (slide.contentType === "TEXT" && !slide.title.trim()) {
+          throw new Error(`Slide ${i + 1}: Title is required for text content`);
         }
 
         if (slide.contentType === "TEXT" && !slide.content.trim()) {
@@ -416,18 +422,20 @@ const TVProfilesTab = React.memo(() => {
       const submissionData = {
         name: profileFormData.name.trim(),
         description: profileFormData.description.trim(),
-        isImmediate: profileFormData.isImmediate,
-        timeSchedules: profileFormData.isDailySchedule ? [] : profileFormData.timeSchedules.map(schedule => ({
+        immediate: profileFormData.isImmediate, // Backend expects 'immediate' not 'isImmediate'
+        timeSchedules: profileFormData.isImmediate || profileFormData.isDailySchedule ? [] : profileFormData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
           endTime: schedule.endTime
         })),
-        // Daily schedule fields
-        isDailySchedule: profileFormData.isDailySchedule,
-        dailyStartTime: profileFormData.dailyStartTime,
-        dailyEndTime: profileFormData.dailyEndTime,
+        // Daily schedule fields - always include them but only populate for non-immediate profiles
+        dailySchedule: profileFormData.isImmediate ? false : profileFormData.isDailySchedule, // Backend expects 'dailySchedule' not 'isDailySchedule'
+        dailyStartTime: profileFormData.isImmediate ? null : profileFormData.dailyStartTime,
+        dailyEndTime: profileFormData.isImmediate ? null : profileFormData.dailyEndTime,
         slides: profileFormData.slides.map((slide, index) => ({
           slideOrder: index + 1,
-          title: slide.title.trim(),
+          title: slide.title.trim() || (slide.contentType.startsWith("IMAGE_") || slide.contentType === "VIDEO" 
+            ? `${slide.contentType.replace('_', ' ').toLowerCase()} slide ${index + 1}` 
+            : slide.title.trim()),
           description: slide.description.trim(),
           contentType: slide.contentType,
           content: slide.content.trim(),
@@ -437,6 +445,8 @@ const TVProfilesTab = React.memo(() => {
           active: slide.active
         }))
       };
+
+      console.log("Submitting profile data:", submissionData);
 
       const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles", {
         method: "POST",
@@ -488,9 +498,28 @@ const TVProfilesTab = React.memo(() => {
   }, [profileFormData, fetchProfiles]);
 
   const handleDeleteProfile = useCallback(async (profileId) => {
-    if (!window.confirm("Are you sure you want to delete this profile?")) return;
+    if (!window.confirm("Are you sure you want to delete this profile? This will also unassign it from all TVs.")) return;
 
     try {
+      // First, get all assignments for this profile and delete them
+      const assignmentsResponse = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assignments");
+      if (assignmentsResponse.ok) {
+        const allAssignments = await assignmentsResponse.json();
+        const profileAssignments = allAssignments.filter(assignment => assignment.profile?.id === profileId);
+        
+        // Delete each assignment for this profile
+        for (const assignment of profileAssignments) {
+          const deleteAssignmentResponse = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/assignments/${assignment.id}`, {
+            method: "DELETE"
+          });
+          
+          if (!deleteAssignmentResponse.ok) {
+            console.warn(`Failed to delete assignment ${assignment.id}`);
+          }
+        }
+      }
+
+      // Then delete the profile
       const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/${profileId}`, {
         method: "DELETE"
       });
@@ -499,9 +528,9 @@ const TVProfilesTab = React.memo(() => {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      setProfileSubmissionMessage("Profile deleted successfully!");
+      setProfileSubmissionMessage("Profile deleted and unassigned from all TVs successfully!");
       fetchProfiles();
-      fetchAssignments(); // Refresh assignments as they might be affected
+      fetchAssignments(); // Refresh assignments as they were affected
     } catch (error) {
       console.error("Error deleting profile:", error);
       setProfileSubmissionMessage(`Error deleting profile: ${error.message}`);
@@ -533,6 +562,11 @@ const TVProfilesTab = React.memo(() => {
         })
       });
 
+      console.log("Assignment request sent:", {
+        tvName: assignmentFormData.tvName,
+        profileId: parseInt(assignmentFormData.profileId)
+      });
+
       if (!response.ok) {
         const error = await response.text();
         throw new Error(error || `HTTP ${response.status}`);
@@ -541,7 +575,11 @@ const TVProfilesTab = React.memo(() => {
       setProfileSubmissionMessage("Profile assigned successfully!");
       setAssignmentFormData({ tvName: "", profileId: "" });
       setShowAssignmentForm(false);
-      fetchAssignments();
+      
+      // Add a small delay before refreshing to ensure backend processing is complete
+      setTimeout(() => {
+        fetchAssignments();
+      }, 500);
 
     } catch (error) {
       console.error("Error assigning profile:", error);
@@ -781,14 +819,34 @@ const TVProfilesTab = React.memo(() => {
 
                   <div className="slide-content">
                     <div className="form-group">
-                      <label className="form-label">Slide Title *</label>
+                      <label className="form-label">
+                        Slide Title {slide.contentType === 'TEXT' ? '*' : ''}
+                        {(slide.contentType.startsWith('IMAGE_') || slide.contentType === 'VIDEO') && (
+                          <span className="title-note"> (Not displayed on TV)</span>
+                        )}
+                      </label>
                       <input
                         type="text"
                         value={slide.title}
                         onChange={(e) => handleSlideInputChange(slideIndex, 'title', e.target.value)}
                         className="form-input"
-                        placeholder="Enter slide title"
-                        required
+                        placeholder={
+                          slide.contentType === 'TEXT' 
+                            ? "Enter slide title" 
+                            : (slide.contentType.startsWith('IMAGE_') || slide.contentType === 'VIDEO')
+                              ? "Auto-generated (not shown on TV)"
+                              : "Enter slide title (optional)"
+                        }
+                        required={slide.contentType === 'TEXT'}
+                        readOnly={slide.contentType.startsWith('IMAGE_') || slide.contentType === 'VIDEO'}
+                        style={{
+                          backgroundColor: (slide.contentType.startsWith('IMAGE_') || slide.contentType === 'VIDEO') 
+                            ? '#f5f5f5' 
+                            : 'inherit',
+                          cursor: (slide.contentType.startsWith('IMAGE_') || slide.contentType === 'VIDEO') 
+                            ? 'not-allowed' 
+                            : 'text'
+                        }}
                       />
                     </div>
 
@@ -1076,8 +1134,12 @@ const TVProfilesTab = React.memo(() => {
                   
                   {/* Profile scheduling information */}
                   <div className="profile-schedule-info">
-                    {profile.isImmediate ? (
+                    {(profile.isImmediate || profile.immediate) ? (
                       <p><strong>Scheduling:</strong> <span className="schedule-immediate">📅 Immediate (Always Active)</span></p>
+                    ) : profile.isDailySchedule ? (
+                      <div>
+                        <p><strong>Scheduling:</strong> <span className="schedule-timed">⏰ Daily Schedule ({profile.dailyStartTime} - {profile.dailyEndTime})</span></p>
+                      </div>
                     ) : (
                       <div>
                         <p><strong>Scheduling:</strong> <span className="schedule-timed">⏰ Scheduled ({profile.timeSchedules?.length || 0} time slot{profile.timeSchedules?.length !== 1 ? 's' : ''})</span></p>
@@ -1111,7 +1173,7 @@ const TVProfilesTab = React.memo(() => {
                           <div key={slide.id || index} className="slide-preview">
                             <div className="slide-info">
                               <span className="slide-number">Slide {slide.slideOrder || index + 1}</span>
-                              <span className="slide-title">{slide.title}</span>
+                              <span className="slide-title">{slide.title || `${slide.contentType} content`}</span>
                               <span className="slide-type">{slide.contentType}</span>
                               <span className="slide-duration">{slide.durationSeconds}s</span>
                             </div>
