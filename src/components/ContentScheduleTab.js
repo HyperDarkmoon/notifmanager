@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate, getImagesPerSetForContentType } from "../utils/contentScheduleUtils";
-import { getInitialFormData, getCurrentDateTime, truncateFileName } from "../utils/adminUtils";
+import { getInitialFormData, getCurrentDateTime, getCurrentTime, convertDailyTimeToDateTime, extractTimeFromDateTime, truncateFileName } from "../utils/adminUtils";
 import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
 import TimeScheduleList from "./TimeScheduleList";
+import DailyScheduleInput from "./DailyScheduleInput";
 
 const ContentScheduleTab = React.memo(() => {
   // Form state - use memoized initial data
@@ -160,6 +161,37 @@ const ContentScheduleTab = React.memo(() => {
       timeSchedules: isImmediate ? [] : prev.timeSchedules,
       startTime: isImmediate ? "" : getCurrentDateTime(),
       endTime: isImmediate ? "" : getCurrentDateTime(),
+      isDailySchedule: isImmediate ? false : prev.isDailySchedule,
+    }));
+  }, []);
+
+  // Handle daily schedule toggle - memoized
+  const handleDailyScheduleToggle = useCallback((isDailySchedule) => {
+    setFormData((prev) => ({
+      ...prev,
+      isDailySchedule,
+      timeSchedules: isDailySchedule ? [] : prev.timeSchedules,
+      dailyStartTime: isDailySchedule ? getCurrentTime() : prev.dailyStartTime,
+      dailyEndTime: isDailySchedule ? getCurrentTime() : prev.dailyEndTime,
+    }));
+  }, []);
+
+  // Handle daily schedule time changes - memoized
+  const handleDailyTimeChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
+
+  // Handle setting current time for daily schedule - memoized
+  const handleSetCurrentTimeForDaily = useCallback(() => {
+    const currentTime = getCurrentTime();
+    setFormData((prev) => ({
+      ...prev,
+      dailyStartTime: currentTime,
+      dailyEndTime: currentTime,
     }));
   }, []);
 
@@ -385,19 +417,35 @@ const ContentScheduleTab = React.memo(() => {
 
       // Validate date/time if provided - for multiple schedules, validate individual schedules
       if (!formData.isImmediate) {
-        if (formData.timeSchedules.length === 0) {
+        if (formData.isDailySchedule) {
+          // Validate daily schedule
+          if (!formData.dailyStartTime || !formData.dailyEndTime) {
+            throw new Error("Both daily start time and end time are required for daily schedules");
+          }
+          
+          const startTime = formData.dailyStartTime;
+          const endTime = formData.dailyEndTime;
+          
+          // Basic time format validation
+          if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime) || 
+              !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(endTime)) {
+            throw new Error("Invalid time format. Please use HH:MM format");
+          }
+        } else if (formData.timeSchedules.length === 0) {
           throw new Error(
-            "For scheduled content, either set it as immediate or add at least one time schedule"
+            "For scheduled content, either set it as immediate, enable daily schedule, or add at least one time schedule"
           );
         }
 
-        // Validate each time schedule
-        for (const schedule of formData.timeSchedules) {
-          const startDate = new Date(schedule.startTime);
-          const endDate = new Date(schedule.endTime);
+        // Validate each time schedule (for non-daily schedules)
+        if (!formData.isDailySchedule) {
+          for (const schedule of formData.timeSchedules) {
+            const startDate = new Date(schedule.startTime);
+            const endDate = new Date(schedule.endTime);
 
-          if (startDate >= endDate) {
-            throw new Error(`Invalid time schedule: Start time (${formatScheduleDate(schedule.startTime)}) must be before end time (${formatScheduleDate(schedule.endTime)})`);
+            if (startDate >= endDate) {
+              throw new Error(`Invalid time schedule: Start time (${formatScheduleDate(schedule.startTime)}) must be before end time (${formatScheduleDate(schedule.endTime)})`);
+            }
           }
         }
       }
@@ -419,6 +467,18 @@ const ContentScheduleTab = React.memo(() => {
         submissionData.timeSchedules = [];
         submissionData.startTime = null;
         submissionData.endTime = null;
+      } else if (formData.isDailySchedule) {
+        // For daily schedules, create a special marker or flag
+        submissionData.isDailySchedule = true;
+        submissionData.dailyStartTime = formData.dailyStartTime;
+        submissionData.dailyEndTime = formData.dailyEndTime;
+        submissionData.timeSchedules = [];
+        
+        // For backward compatibility, set startTime/endTime to today's schedule
+        const startDateTime = convertDailyTimeToDateTime(formData.dailyStartTime);
+        const endDateTime = convertDailyTimeToDateTime(formData.dailyEndTime);
+        submissionData.startTime = startDateTime;
+        submissionData.endTime = endDateTime;
       } else {
         submissionData.timeSchedules = formData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
@@ -816,60 +876,79 @@ const ContentScheduleTab = React.memo(() => {
               <div className="schedule-management">
                 <h3>Time Schedules</h3>
                 
-                {/* Add New Schedule Form */}
-                <div className="add-schedule-form">
-                  <div className="schedule-inputs">
-                    <div className="schedule-buttons">
-                      <button
-                        type="button"
-                        className="schedule-helper-btn current"
-                        onClick={handleSetCurrentTime}
-                        title="Set current time as start point"
-                      >
-                        🕒 Use Current Time
-                      </button>
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Start Time</label>
-                      <input
-                        type="datetime-local"
-                        name="startTime"
-                        value={formData.startTime}
-                        onChange={handleInputChange}
-                        className="form-input"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">End Time</label>
-                      <input
-                        type="datetime-local"
-                        name="endTime"
-                        value={formData.endTime}
-                        onChange={handleInputChange}
-                        className="form-input"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <button
-                        type="button"
-                        className="add-schedule-btn"
-                        onClick={handleAddTimeSchedule}
-                      >
-                        ➕ Add Time Slot
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Display Added Schedules */}
-                <TimeScheduleList
-                  timeSchedules={formData.timeSchedules}
-                  onRemove={handleRemoveTimeSchedule}
-                  formatDate={formatScheduleDate}
+                {/* Daily Schedule Input */}
+                <DailyScheduleInput
+                  dailyStartTime={formData.dailyStartTime}
+                  dailyEndTime={formData.dailyEndTime}
+                  onTimeChange={handleDailyTimeChange}
+                  onSetCurrentTime={handleSetCurrentTimeForDaily}
+                  isDailySchedule={formData.isDailySchedule}
+                  onToggleDailySchedule={handleDailyScheduleToggle}
                 />
+
+                {/* Regular Schedule Form - only show if daily schedule is not enabled */}
+                {!formData.isDailySchedule && (
+                  <>
+                    <div className="schedule-divider">
+                      <span>OR</span>
+                    </div>
+                    
+                    <div className="add-schedule-form">
+                      <h4>One-time or Custom Schedules</h4>
+                      <div className="schedule-inputs">
+                        <div className="schedule-buttons">
+                          <button
+                            type="button"
+                            className="schedule-helper-btn current"
+                            onClick={handleSetCurrentTime}
+                            title="Set current time as start point"
+                          >
+                            🕒 Use Current Time
+                          </button>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">Start Time</label>
+                          <input
+                            type="datetime-local"
+                            name="startTime"
+                            value={formData.startTime}
+                            onChange={handleInputChange}
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">End Time</label>
+                          <input
+                            type="datetime-local"
+                            name="endTime"
+                            value={formData.endTime}
+                            onChange={handleInputChange}
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <button
+                            type="button"
+                            className="add-schedule-btn"
+                            onClick={handleAddTimeSchedule}
+                          >
+                            ➕ Add Time Slot
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Display Added Schedules */}
+                    <TimeScheduleList
+                      timeSchedules={formData.timeSchedules}
+                      onRemove={handleRemoveTimeSchedule}
+                      formatDate={formatScheduleDate}
+                    />
+                  </>
+                )}
               </div>
             )}
 

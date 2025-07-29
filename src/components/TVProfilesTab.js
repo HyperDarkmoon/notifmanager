@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate } from "../utils/contentScheduleUtils";
-import { getCurrentDateTime, truncateFileName } from "../utils/adminUtils";
+import { getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS } from "../constants/adminConstants";
 import TimeScheduleList from "./TimeScheduleList";
+import DailyScheduleInput from "./DailyScheduleInput";
 
 const TVProfilesTab = React.memo(() => {
   // Profile management state
@@ -18,6 +19,10 @@ const TVProfilesTab = React.memo(() => {
     description: "",
     isImmediate: true, // Default to immediate
     timeSchedules: [], // Array of time schedules
+    // Daily schedule fields
+    isDailySchedule: false,
+    dailyStartTime: getCurrentTime(),
+    dailyEndTime: getCurrentTime(),
     slides: [
       {
         id: 1,
@@ -92,7 +97,8 @@ const TVProfilesTab = React.memo(() => {
     setProfileFormData(prev => ({
       ...prev,
       isImmediate,
-      timeSchedules: isImmediate ? [] : prev.timeSchedules
+      timeSchedules: isImmediate ? [] : prev.timeSchedules,
+      isDailySchedule: isImmediate ? false : prev.isDailySchedule
     }));
   }, []);
 
@@ -140,6 +146,36 @@ const TVProfilesTab = React.memo(() => {
       startTime: currentTime,
       endTime: currentTime,
       isImmediate: false
+    }));
+  }, []);
+
+  // Handle daily schedule toggle for profiles
+  const handleProfileDailyScheduleToggle = useCallback((isDailySchedule) => {
+    setProfileFormData((prev) => ({
+      ...prev,
+      isDailySchedule,
+      timeSchedules: isDailySchedule ? [] : prev.timeSchedules,
+      dailyStartTime: isDailySchedule ? getCurrentTime() : prev.dailyStartTime,
+      dailyEndTime: isDailySchedule ? getCurrentTime() : prev.dailyEndTime,
+    }));
+  }, []);
+
+  // Handle daily schedule time changes for profiles
+  const handleProfileDailyTimeChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setProfileFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
+
+  // Handle setting current time for daily schedule for profiles
+  const handleSetProfileCurrentTimeForDaily = useCallback(() => {
+    const currentTime = getCurrentTime();
+    setProfileFormData((prev) => ({
+      ...prev,
+      dailyStartTime: currentTime,
+      dailyEndTime: currentTime,
     }));
   }, []);
 
@@ -319,12 +355,28 @@ const TVProfilesTab = React.memo(() => {
       }
 
       // Validate scheduling
-      if (!profileFormData.isImmediate && profileFormData.timeSchedules.length === 0) {
-        throw new Error("For scheduled profiles, please add at least one time schedule");
+      if (!profileFormData.isImmediate) {
+        if (profileFormData.isDailySchedule) {
+          // Validate daily schedule
+          if (!profileFormData.dailyStartTime || !profileFormData.dailyEndTime) {
+            throw new Error("Both daily start time and end time are required for daily schedules");
+          }
+          
+          const startTime = profileFormData.dailyStartTime;
+          const endTime = profileFormData.dailyEndTime;
+          
+          // Basic time format validation
+          if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime) || 
+              !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(endTime)) {
+            throw new Error("Invalid time format. Please use HH:MM format");
+          }
+        } else if (profileFormData.timeSchedules.length === 0) {
+          throw new Error("For scheduled profiles, either enable daily schedule or add at least one time schedule");
+        }
       }
 
-      // Validate each time schedule
-      if (!profileFormData.isImmediate) {
+      // Validate each time schedule (for non-daily schedules)
+      if (!profileFormData.isImmediate && !profileFormData.isDailySchedule) {
         for (let i = 0; i < profileFormData.timeSchedules.length; i++) {
           const schedule = profileFormData.timeSchedules[i];
           const startDate = new Date(schedule.startTime);
@@ -365,10 +417,14 @@ const TVProfilesTab = React.memo(() => {
         name: profileFormData.name.trim(),
         description: profileFormData.description.trim(),
         isImmediate: profileFormData.isImmediate,
-        timeSchedules: profileFormData.timeSchedules.map(schedule => ({
+        timeSchedules: profileFormData.isDailySchedule ? [] : profileFormData.timeSchedules.map(schedule => ({
           startTime: schedule.startTime,
           endTime: schedule.endTime
         })),
+        // Daily schedule fields
+        isDailySchedule: profileFormData.isDailySchedule,
+        dailyStartTime: profileFormData.dailyStartTime,
+        dailyEndTime: profileFormData.dailyEndTime,
         slides: profileFormData.slides.map((slide, index) => ({
           slideOrder: index + 1,
           title: slide.title.trim(),
@@ -400,6 +456,10 @@ const TVProfilesTab = React.memo(() => {
         description: "",
         isImmediate: true,
         timeSchedules: [],
+        // Daily schedule fields
+        isDailySchedule: false,
+        dailyStartTime: getCurrentTime(),
+        dailyEndTime: getCurrentTime(),
         slides: [{
           id: 1,
           title: "",
@@ -611,8 +671,26 @@ const TVProfilesTab = React.memo(() => {
                 <div className="schedule-management">
                   <h4>Time Schedules</h4>
                   
-                  {/* Add New Schedule Form */}
-                  <div className="add-schedule-form">
+                  {/* Daily Schedule Input */}
+                  <DailyScheduleInput
+                    dailyStartTime={profileFormData.dailyStartTime}
+                    dailyEndTime={profileFormData.dailyEndTime}
+                    onTimeChange={handleProfileDailyTimeChange}
+                    onSetCurrentTime={handleSetProfileCurrentTimeForDaily}
+                    isDailySchedule={profileFormData.isDailySchedule}
+                    onToggleDailySchedule={handleProfileDailyScheduleToggle}
+                  />
+
+                  {/* Regular Schedule Form - only show if daily schedule is not enabled */}
+                  {!profileFormData.isDailySchedule && (
+                    <>
+                      <div className="schedule-divider">
+                        <span>OR</span>
+                      </div>
+                      
+                      {/* Add New Schedule Form */}
+                      <div className="add-schedule-form">
+                        <h4>One-time or Custom Schedules</h4>
                     <div className="schedule-inputs">
                       <div className="schedule-buttons">
                         <button
@@ -665,6 +743,8 @@ const TVProfilesTab = React.memo(() => {
                     onRemove={handleRemoveProfileTimeSchedule}
                     formatDate={formatScheduleDate}
                   />
+                    </>
+                  )}
                 </div>
               )}
             </div>

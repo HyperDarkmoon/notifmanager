@@ -1063,6 +1063,34 @@ body.admin-view {
   margin-top: 1rem;
 }
 
+.schedule-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem 0;
+  position: relative;
+}
+
+.schedule-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #cbd5e0;
+}
+
+.schedule-divider span {
+  background: #f8fafc;
+  padding: 0 1rem;
+  color: #718096;
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 1;
+  position: relative;
+}
+
 .add-schedule-form {
   margin-bottom: 1.5rem;
 }
@@ -1085,6 +1113,39 @@ body.admin-view {
 .add-schedule-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+}
+
+/* Daily Schedule Styles */
+.daily-schedule-section {
+  margin-bottom: 1.5rem;
+}
+
+.daily-schedule-toggle {
+  margin-bottom: 1rem;
+}
+
+.daily-time-inputs {
+  background: #f0f9ff;
+  border: 2px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.daily-schedule-info {
+  margin-top: 1rem;
+}
+
+.daily-schedule-info .info-box {
+  background: #e0f2fe;
+  border: 2px solid #38bdf8;
+  border-radius: 8px;
+  padding: 1rem;
+  color: #0c4a6e;
+}
+
+.daily-schedule-info .info-box strong {
+  color: #075985;
 }
 
 /* Time Slots List */
