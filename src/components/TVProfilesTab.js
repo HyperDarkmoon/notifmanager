@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate } from "../utils/contentScheduleUtils";
 import { getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
-import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS } from "../constants/adminConstants";
+import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
 
@@ -80,6 +80,48 @@ const TVProfilesTab = React.memo(() => {
       console.error("Error fetching assignments:", error);
     } finally {
       setIsLoadingAssignments(false);
+    }
+  }, []);
+
+  // Upload large files to server with fallback to base64 - memoized
+  const uploadLargeFile = useCallback(async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await makeAuthenticatedRequest(
+        "http://localhost:8090/api/content/upload-file",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.fileUrl; // Assuming backend returns { fileUrl: "..." }
+      
+    } catch (error) {
+      console.warn(`File upload endpoint not available, falling back to base64 for ${file.name}:`, error.message);
+      
+      // Fallback to base64 if upload endpoint is not available
+      // But warn about potential size issues
+      if (file.size > MAX_FALLBACK_SIZE) { // 10MB
+        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 10MB.`);
+      }
+      
+      // Convert to base64 as fallback
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      
+      return base64;
     }
   }, []);
 
@@ -260,28 +302,38 @@ const TVProfilesTab = React.memo(() => {
   const handleSlideFileUpload = useCallback(async (slideIndex, files, fileType) => {
     if (!files || files.length === 0) return;
 
+    const allFiles = Array.from(files);
     const maxSize = fileType === 'image' ? MAX_BASE64_SIZE_IMAGES : MAX_BASE64_SIZE_VIDEOS;
-    const validFiles = Array.from(files).filter(file => file.size <= maxSize);
     
-    if (validFiles.length !== files.length) {
-      setProfileSubmissionMessage(`Some files were too large and skipped. Max size: ${Math.floor(maxSize / (1024 * 1024))}MB`);
-    }
-
     try {
-      const filePromises = validFiles.map(file => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      });
-
-      const fileDataUrls = await Promise.all(filePromises);
+      const fileDataUrls = [];
+      
+      for (const file of allFiles) {
+        if (file.size <= maxSize) {
+          // Small file: convert to base64
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+          fileDataUrls.push(base64);
+        } else {
+          // Large file: upload to server and get URL
+          try {
+            setProfileSubmissionMessage(`Uploading large file: ${file.name}...`);
+            const uploadedUrl = await uploadLargeFile(file);
+            fileDataUrls.push(uploadedUrl);
+          } catch (error) {
+            setProfileSubmissionMessage(`Error uploading ${file.name}: ${error.message}`);
+            return;
+          }
+        }
+      }
       
       if (fileType === 'image') {
         setProfileImageFiles(prev => ({
           ...prev,
-          [slideIndex]: validFiles
+          [slideIndex]: allFiles
         }));
         
         setProfileFormData(prev => ({
@@ -293,7 +345,7 @@ const TVProfilesTab = React.memo(() => {
       } else {
         setProfileVideoFiles(prev => ({
           ...prev,
-          [slideIndex]: validFiles
+          [slideIndex]: allFiles
         }));
         
         setProfileFormData(prev => ({
@@ -303,11 +355,13 @@ const TVProfilesTab = React.memo(() => {
           )
         }));
       }
+      
+      setProfileSubmissionMessage("All files processed successfully!");
     } catch (error) {
       console.error("Error processing files:", error);
       setProfileSubmissionMessage("Error processing files");
     }
-  }, []);
+  }, [uploadLargeFile]);
 
   const handleRemoveSlideFile = useCallback((slideIndex, fileIndex, fileType) => {
     if (fileType === 'image') {
