@@ -516,7 +516,7 @@ body.sidebar-closed .tv-page {
 .custom-content-video {
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover !important;
+  object-fit: fill !important;
   border-radius: 0;
   box-shadow: none;
   background: #000;
@@ -734,7 +734,7 @@ body.sidebar-closed .tv-page {
 .profile-slide-video {
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover !important;
+  object-fit: fill !important;
   border-radius: 8px;
   box-shadow: none;
   background: #000;

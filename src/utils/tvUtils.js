@@ -290,7 +290,7 @@ export const renderProfileSlide = (
                 if (onVideoEnd) onVideoEnd();
               }}
               className="custom-content-video"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "fill" }}
             />
           </div>
         )}
@@ -389,7 +389,7 @@ export const renderCustomDisplay = (
                   console.error("Video playback error:", e);
                   if (onVideoEnd) onVideoEnd();
                 }}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "fill" }}
               />
             </div>
           ) : null}
@@ -438,7 +438,7 @@ export const renderCustomDisplay = (
                   console.error("Video playback error:", e);
                   if (onVideoEnd) onVideoEnd();
                 }}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "fill" }}
               />
             </div>
           ) : // Single image or file display
@@ -467,7 +467,7 @@ export const renderCustomDisplay = (
                   console.error("Video playback error:", e);
                   if (onVideoEnd) onVideoEnd();
                 }}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "fill" }}
               />
             </div>
           ) : (
