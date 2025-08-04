@@ -996,8 +996,8 @@ const TVProfilesTab = React.memo(() => {
                             <strong>Choose Images</strong>
                             <div className="upload-help">
                               {slide.contentType === "IMAGE_SINGLE" && "Upload multiple images - they will rotate every 5 seconds"}
-                              {slide.contentType === "IMAGE_DUAL" && "Upload images in sets of 2 - each pair will rotate every 5 seconds"}
-                              {slide.contentType === "IMAGE_QUAD" && "Upload images in sets of 4 - each group will rotate every 5 seconds"}
+                              {slide.contentType === "IMAGE_DUAL" && "Upload 1-2 images - they will be displayed side by side"}
+                              {slide.contentType === "IMAGE_QUAD" && "Upload 1-4 images - they will be displayed in a 2x2 grid (empty slots will be left blank)"}
                             </div>
                           </div>
                         </label>

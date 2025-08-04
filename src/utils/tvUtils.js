@@ -256,13 +256,18 @@ export const renderProfileSlide = (
               
               return (
                 <div className={`custom-file-image-grid grid-${imagesPerSet}`}>
-                  {currentSet.map((url, index) => (
+                  {Array.from({ length: imagesPerSet }, (_, index) => (
                     <div key={index} className="custom-file-image-container">
-                      <img
-                        src={url}
-                        alt={`Slide content ${index + 1}`}
-                        className="custom-content-image"
-                      />
+                      {currentSet[index] ? (
+                        <img
+                          src={currentSet[index]}
+                          alt={`Slide content ${index + 1}`}
+                          className="custom-content-image"
+                        />
+                      ) : (
+                        // Empty slot - show nothing but maintain grid structure
+                        <div className="custom-content-image" style={{ backgroundColor: 'transparent' }}></div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -350,13 +355,18 @@ export const renderCustomDisplay = (
               
               return (
                 <div className={`custom-file-image-grid grid-${imagesPerSet}`}>
-                  {currentSet.map((url, index) => (
+                  {Array.from({ length: imagesPerSet }, (_, index) => (
                     <div key={index} className="custom-file-image-container">
-                      <img
-                        src={url}
-                        alt={`Content ${index + 1}`}
-                        className="custom-content-image"
-                      />
+                      {currentSet[index] ? (
+                        <img
+                          src={currentSet[index]}
+                          alt={`Content ${index + 1}`}
+                          className="custom-content-image"
+                        />
+                      ) : (
+                        // Empty slot - show nothing but maintain grid structure
+                        <div className="custom-content-image" style={{ backgroundColor: 'transparent' }}></div>
+                      )}
                     </div>
                   ))}
                 </div>

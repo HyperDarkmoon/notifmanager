@@ -224,23 +224,21 @@ const ContentScheduleTab = React.memo(() => {
       setSubmissionMessage("");
     } else {
       const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
+      const completeSets = Math.floor(newImageFiles.length / imagesPerSet);
+      const remainingImages = newImageFiles.length % imagesPerSet;
+      
       if (newImageFiles.length < imagesPerSet) {
         setSubmissionMessage(
-          `Note: You need at least ${imagesPerSet} image(s) for one complete set. You have ${newImageFiles.length} image(s).`
+          `You have ${newImageFiles.length} image(s). Missing slots will be left empty in the display.`
+        );
+      } else if (remainingImages === 0) {
+        setSubmissionMessage(
+          `Perfect! ${newImageFiles.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
         );
       } else {
-        const completeSets = Math.floor(newImageFiles.length / imagesPerSet);
-        const remainingImages = newImageFiles.length % imagesPerSet;
-        
-        if (remainingImages === 0) {
-          setSubmissionMessage(
-            `Perfect! ${newImageFiles.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
-          );
-        } else {
-          setSubmissionMessage(
-            `Good! ${newImageFiles.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Complete sets will rotate every 5 seconds.`
-          );
-        }
+        setSubmissionMessage(
+          `Good! ${newImageFiles.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Missing slots in the last set will be empty.`
+        );
       }
     }
   }, [imageFiles, formData.imageUrls, formData.contentType]);
@@ -256,24 +254,22 @@ const ContentScheduleTab = React.memo(() => {
       return;
     }
 
-    // Check if we have at least one complete set
+    // Update message based on number of images
+    const completeSets = Math.floor(files.length / imagesPerSet);
+    const remainingImages = files.length % imagesPerSet;
+    
     if (files.length < imagesPerSet) {
       setSubmissionMessage(
-        `Note: You need at least ${imagesPerSet} image(s) for one complete set. You have ${files.length} image(s).`
+        `You have ${files.length} image(s). Missing slots will be left empty in the display.`
+      );
+    } else if (remainingImages === 0) {
+      setSubmissionMessage(
+        `Perfect! ${files.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
       );
     } else {
-      const completeSets = Math.floor(files.length / imagesPerSet);
-      const remainingImages = files.length % imagesPerSet;
-      
-      if (remainingImages === 0) {
-        setSubmissionMessage(
-          `Perfect! ${files.length} images will create ${completeSets} complete set(s). Each set will rotate every 5 seconds.`
-        );
-      } else {
-        setSubmissionMessage(
-          `Good! ${files.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Complete sets will rotate every 5 seconds.`
-        );
-      }
+      setSubmissionMessage(
+        `Good! ${files.length} images will create ${completeSets} complete set(s) with ${remainingImages} extra image(s). Missing slots in the last set will be empty.`
+      );
     }
 
     setImageFiles(files);
@@ -397,16 +393,10 @@ const ContentScheduleTab = React.memo(() => {
       }
 
       if (formData.contentType.startsWith("IMAGE_")) {
-        const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
         if (imageFiles.length === 0) {
-          throw new Error(
-            `${formData.contentType} requires at least ${imagesPerSet} image(s)`
-          );
-        } else if (imageFiles.length < imagesPerSet) {
-          throw new Error(
-            `${formData.contentType} requires at least ${imagesPerSet} image(s) for one complete set. You have ${imageFiles.length} image(s).`
-          );
+          throw new Error(`${formData.contentType} requires at least 1 image`);
         }
+        // Allow any number of images - partial sets are okay
       }
 
       if (formData.contentType === "VIDEO") {
@@ -768,9 +758,9 @@ const ContentScheduleTab = React.memo(() => {
                       {formData.contentType === "IMAGE_SINGLE" &&
                         "Upload multiple images - they will rotate every 5 seconds"}
                       {formData.contentType === "IMAGE_DUAL" &&
-                        "Upload images in sets of 2 - each pair will rotate every 5 seconds"}
+                        "Upload 1-2 images - they will be displayed side by side"}
                       {formData.contentType === "IMAGE_QUAD" &&
-                        "Upload images in sets of 4 - each group will rotate every 5 seconds"}
+                        "Upload 1-4 images - they will be displayed in a 2x2 grid (empty slots will be left blank)"}
                     </div>
                   </div>
                 </label>

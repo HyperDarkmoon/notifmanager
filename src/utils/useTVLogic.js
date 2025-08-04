@@ -228,15 +228,73 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     // Add a 1-second delay before allowing rotation to continue
     videoEndTimeoutRef.current = setTimeout(() => {
       console.log(`${tvId} - Video end delay completed, rotation can continue`);
+      
+      // Determine content count properly (same logic as main rotation)
+      let contentCount;
+      if (customContent && customContent.type === "profile" && customContent.slides) {
+        contentCount = customContent.slides.length;
+      } else if (customContent) {
+        contentCount = 3;
+      } else {
+        contentCount = 2;
+      }
+      
       // Force a rotation to the next slide
       setContentIndex((prevIndex) => {
-        const contentCount = customContent ? 3 : 2;
         const nextIndex = (prevIndex + 1) % contentCount;
         console.log(
-          `${tvId} - Moving to next slide after video: ${prevIndex} -> ${nextIndex}`
+          `${tvId} - Moving to next slide after video: ${prevIndex} -> ${nextIndex} (${contentCount} total)`
         );
         return nextIndex;
       });
+      
+      // Restart the rotation interval
+      if (rotationIntervalRef.current) {
+        clearInterval(rotationIntervalRef.current);
+      }
+      
+      rotationIntervalRef.current = setInterval(() => {
+        if (!isVideoPlayingRef.current) {
+          setContentIndex((prevIndex) => {
+            // Determine if we're in profile mode
+            const isProfile = customContent && customContent.type === "profile" && customContent.slides;
+            
+            if (isProfile) {
+              // Profile mode: simple rotation through profile slides
+              const nextIndex = (prevIndex + 1) % contentCount;
+              console.log(`${tvId} - Profile slide rotation: ${prevIndex} -> ${nextIndex} (${contentCount} total slides)`);
+              return nextIndex;
+            } else {
+              // Regular mode: handle image set rotation for custom content
+              if (prevIndex === 2 && customContent && customContent.imageUrls) {
+                const imageSets = getImageSetsFromUrls(customContent.imageUrls, customContent.contentType);
+                
+                if (imageSets.length > 1) {
+                  // Use the ref to get current image set index
+                  const currentImageSetIndex = imageSetIndexRef.current;
+                  
+                  // If we haven't rotated through all image sets yet, stay on this content
+                  if (currentImageSetIndex < imageSets.length - 1) {
+                    console.log(`${tvId} - Staying on custom content, more image sets to show (${currentImageSetIndex + 1}/${imageSets.length})`);
+                    return prevIndex; // Stay on custom content
+                  }
+                  // If we've shown all image sets, reset image set index and move to next content
+                  console.log(`${tvId} - All image sets shown, moving to next content type`);
+                  setImageSetIndex(0);
+                }
+              }
+              
+              const nextIndex = (prevIndex + 1) % contentCount;
+              console.log(`${tvId} - Regular content rotation: ${prevIndex} -> ${nextIndex} (${contentCount} total)`);
+              return nextIndex;
+            }
+          });
+        } else {
+          console.log(`${tvId} - Video is playing, skipping rotation`);
+        }
+      }, ROTATION_PERIOD);
+      
+      console.log(`${tvId} - Rotation interval restarted after video end`);
     }, 1000);
   };
 

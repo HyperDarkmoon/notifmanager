@@ -78,12 +78,10 @@ export const validateSchedule = (formData) => {
   }
 
   if (formData.contentType.startsWith("IMAGE_")) {
-    const imagesPerSet = getImagesPerSetForContentType(formData.contentType);
     if (formData.imageUrls.length === 0) {
-      errors.push(`${formData.contentType} requires at least ${imagesPerSet} image(s)`);
-    } else if (formData.imageUrls.length % imagesPerSet !== 0) {
-      errors.push(`${formData.contentType} requires images in multiples of ${imagesPerSet}. You have ${formData.imageUrls.length} images.`);
+      errors.push(`${formData.contentType} requires at least 1 image`);
     }
+    // Remove the requirement for exact multiples - allow partial sets
   }
 
   if (formData.contentType === CONTENT_TYPES.VIDEO) {
