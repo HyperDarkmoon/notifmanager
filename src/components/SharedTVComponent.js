@@ -13,6 +13,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
   const {
     contentIndex,
     imageSetIndex,
+    videoSetIndex,
     temperature,
     pressure,
     randomText,
@@ -79,7 +80,8 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
           currentSlide,
           imageSetIndex,
           handleVideoStart,
-          handleVideoEnd
+          handleVideoEnd,
+          videoSetIndex
         );
       }
       // Fallback if slide doesn't exist
@@ -101,7 +103,8 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
           customContent,
           imageSetIndex,
           handleVideoStart,
-          handleVideoEnd
+          handleVideoEnd,
+          videoSetIndex
         );
       default:
         return null;

@@ -468,7 +468,7 @@ const TVProfilesTab = React.memo(() => {
         }
 
         if (slide.contentType === "VIDEO" && slide.videoUrls.length === 0) {
-          throw new Error(`Slide ${i + 1}: A video is required`);
+          throw new Error(`Slide ${i + 1}: At least one video is required`);
         }
       }
 
@@ -1036,14 +1036,15 @@ const TVProfilesTab = React.memo(() => {
                           <input
                             type="file"
                             accept="video/*"
+                            multiple={true}
                             onChange={(e) => handleSlideFileUpload(slideIndex, e.target.files, 'video')}
                             className="file-input"
                           />
                           <div className="upload-icon">🎥</div>
                           <div>
-                            <strong>Choose Video</strong>
+                            <strong>Choose Videos</strong>
                             <div className="upload-help">
-                              Select 1 video file (MP4, WebM, OGG)
+                              Select multiple video files (MP4, WebM, OGG) - they will play sequentially
                             </div>
                           </div>
                         </label>

@@ -237,7 +237,8 @@ export const renderProfileSlide = (
   slide,
   imageSetIndex,
   onVideoStart,
-  onVideoEnd
+  onVideoEnd,
+  videoSetIndex = 0
 ) => {
   if (!slide) return null;
 
@@ -279,7 +280,7 @@ export const renderProfileSlide = (
         {slide.contentType === "VIDEO" && slide.videoUrls && slide.videoUrls.length > 0 && (
           <div className="custom-file">
             <video
-              src={slide.videoUrls[0]}
+              src={slide.videoUrls[videoSetIndex] || slide.videoUrls[0]}
               autoPlay
               muted
               playsInline
@@ -334,7 +335,8 @@ export const renderCustomDisplay = (
   customContent,
   imageSetIndex,
   onVideoStart,
-  onVideoEnd
+  onVideoEnd,
+  videoSetIndex = 0
 ) => {
   if (!customContent) return null;
 
@@ -379,7 +381,7 @@ export const renderCustomDisplay = (
           {customContent.videoUrls && customContent.videoUrls.length > 0 ? (
             <div className="custom-video-container">
               <video
-                src={customContent.videoUrls[0]}
+                src={customContent.videoUrls[videoSetIndex] || customContent.videoUrls[0]}
                 className="custom-content-video"
                 autoPlay
                 playsInline

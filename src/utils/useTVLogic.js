@@ -8,11 +8,12 @@ import {
   RANDOM_TEXT_INTERVAL,
   TIME_UPDATE_INTERVAL,
 } from "./tvUtils";
-import { getImageSetsFromUrls } from "./contentScheduleUtils";
+import { getImageSetsFromUrls, getVideoSetsFromUrls } from "./contentScheduleUtils";
 
 export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [contentIndex, setContentIndex] = useState(0);
   const [imageSetIndex, setImageSetIndex] = useState(0);
+  const [videoSetIndex, setVideoSetIndex] = useState(0);
   const [temperature, setTemperature] = useState(initialTemperature);
   const [pressure, setPressure] = useState(initialPressure);
   const [randomText, setRandomText] = useState("");
@@ -22,14 +23,21 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const prevContentRef = useRef(null);
   const rotationIntervalRef = useRef(null);
   const imageSetRotationIntervalRef = useRef(null);
+  const videoSetRotationIntervalRef = useRef(null);
   const isVideoPlayingRef = useRef(false);
   const videoEndTimeoutRef = useRef(null);
   const imageSetIndexRef = useRef(0);
+  const videoSetIndexRef = useRef(0);
 
   // Keep imageSetIndexRef in sync with imageSetIndex state
   useEffect(() => {
     imageSetIndexRef.current = imageSetIndex;
   }, [imageSetIndex]);
+
+  // Keep videoSetIndexRef in sync with videoSetIndex state
+  useEffect(() => {
+    videoSetIndexRef.current = videoSetIndex;
+  }, [videoSetIndex]);
 
   // Environmental data simulation and time updates
   useEffect(() => {
@@ -55,9 +63,10 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     return () => clearInterval(interval);
   }, [tvId]);
 
-  // Reset image set index when custom content changes
+  // Reset image and video set indexes when custom content changes
   useEffect(() => {
     setImageSetIndex(0);
+    setVideoSetIndex(0);
   }, [customContent]);
 
   // Image set rotation for custom content (separate from main content rotation)
@@ -90,6 +99,41 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     return () => {
       if (imageSetRotationIntervalRef.current) {
         clearInterval(imageSetRotationIntervalRef.current);
+      }
+    };
+  }, [customContent, contentIndex, tvId]);
+
+  // Video set rotation for custom content (separate from main content rotation)
+  useEffect(() => {
+    // Capture the current ref value
+    const currentInterval = videoSetRotationIntervalRef.current;
+    
+    // Clear any existing video set rotation
+    if (currentInterval) {
+      clearInterval(currentInterval);
+    }
+
+    // Only setup video set rotation if we're on custom content and it has multiple videos
+    // AND we're not currently in the middle of playing videos
+    if (customContent && contentIndex === 2 && customContent.videoUrls && customContent.contentType === "VIDEO" && !isVideoPlayingRef.current) {
+      const videoSets = getVideoSetsFromUrls(customContent.videoUrls);
+      
+      console.log(`${tvId} - Video sets for VIDEO content:`, videoSets.length, 'videos');
+      
+      // Only reset video index when starting fresh (not when resuming)
+      if (videoSetIndexRef.current >= videoSets.length) {
+        console.log(`${tvId} - Resetting video index from ${videoSetIndexRef.current} to 0`);
+        setVideoSetIndex(0);
+      }
+      
+      // Note: Video rotation is handled by the handleVideoEnd function when each video finishes
+      // We don't use setInterval for videos since they should advance when the current video ends
+    }
+
+    return () => {
+      // Use the captured interval value for cleanup
+      if (currentInterval) {
+        clearInterval(currentInterval);
       }
     };
   }, [customContent, contentIndex, tvId]);
@@ -221,15 +265,77 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   };
 
   const handleVideoEnd = () => {
-    console.log(`${tvId} - Video ended, will resume rotation in 1 second`);
+    console.log(`${tvId} - Video ended`);
     setIsVideoPlaying(false);
     isVideoPlayingRef.current = false;
 
-    // Add a 1-second delay before allowing rotation to continue
-    videoEndTimeoutRef.current = setTimeout(() => {
-      console.log(`${tvId} - Video end delay completed, rotation can continue`);
+    // Check if we're in video content with multiple videos
+    if (customContent && customContent.contentType === "VIDEO" && customContent.videoUrls && customContent.videoUrls.length > 1) {
+      const videoSets = getVideoSetsFromUrls(customContent.videoUrls);
+      const currentVideoIndex = videoSetIndexRef.current;
       
-      // Determine content count properly (same logic as main rotation)
+      console.log(`${tvId} - Video ${currentVideoIndex + 1} of ${videoSets.length} ended`);
+      
+      if (currentVideoIndex < videoSets.length - 1) {
+        // Move to next video in sequence
+        const nextVideoIndex = currentVideoIndex + 1;
+        console.log(`${tvId} - Moving to next video: ${currentVideoIndex} -> ${nextVideoIndex}`);
+        
+        // Short delay before next video starts
+        videoEndTimeoutRef.current = setTimeout(() => {
+          setVideoSetIndex(nextVideoIndex);
+        }, 500);
+        return; // Don't proceed to slide rotation yet
+      } else {
+        // All videos played, move to slide 1 FIRST, then reset video index
+        console.log(`${tvId} - All videos played, moving to slide 1`);
+        
+        // Immediately change content index to slide 1 (index 0)
+        setContentIndex(0);
+        
+        // Wait a moment, then reset video index for next time
+        videoEndTimeoutRef.current = setTimeout(() => {
+          console.log(`${tvId} - Resetting video index to 0 for next video sequence`);
+          setVideoSetIndex(0);
+          
+          // Restart normal rotation after another delay
+          setTimeout(() => {
+            if (rotationIntervalRef.current) {
+              clearInterval(rotationIntervalRef.current);
+            }
+            
+            // Determine content count for proper rotation
+            let contentCount;
+            if (customContent && customContent.type === "profile" && customContent.slides) {
+              contentCount = customContent.slides.length;
+            } else if (customContent) {
+              contentCount = 3;
+            } else {
+              contentCount = 2;
+            }
+            
+            rotationIntervalRef.current = setInterval(() => {
+              if (!isVideoPlayingRef.current) {
+                setContentIndex((prevIndex) => {
+                  const nextIndex = (prevIndex + 1) % contentCount;
+                  console.log(`${tvId} - Normal rotation resumed: ${prevIndex} -> ${nextIndex}`);
+                  return nextIndex;
+                });
+              }
+            }, ROTATION_PERIOD);
+            
+            console.log(`${tvId} - Normal rotation restarted after video sequence completed`);
+          }, 1000);
+        }, 500);
+        return; // Exit early, we've handled everything
+      }
+    }
+
+    // For single videos or profile videos, add a normal delay before rotation continues
+    videoEndTimeoutRef.current = setTimeout(() => {
+      console.log(`${tvId} - Single video end delay completed, rotation can continue`);
+      
+      // Determine content count properly
       let contentCount;
       if (customContent && customContent.type === "profile" && customContent.slides) {
         contentCount = customContent.slides.length;
@@ -243,7 +349,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       setContentIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % contentCount;
         console.log(
-          `${tvId} - Moving to next slide after video: ${prevIndex} -> ${nextIndex} (${contentCount} total)`
+          `${tvId} - Moving to next slide after single video: ${prevIndex} -> ${nextIndex} (${contentCount} total)`
         );
         return nextIndex;
       });
@@ -256,51 +362,21 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       rotationIntervalRef.current = setInterval(() => {
         if (!isVideoPlayingRef.current) {
           setContentIndex((prevIndex) => {
-            // Determine if we're in profile mode
-            const isProfile = customContent && customContent.type === "profile" && customContent.slides;
-            
-            if (isProfile) {
-              // Profile mode: simple rotation through profile slides
-              const nextIndex = (prevIndex + 1) % contentCount;
-              console.log(`${tvId} - Profile slide rotation: ${prevIndex} -> ${nextIndex} (${contentCount} total slides)`);
-              return nextIndex;
-            } else {
-              // Regular mode: handle image set rotation for custom content
-              if (prevIndex === 2 && customContent && customContent.imageUrls) {
-                const imageSets = getImageSetsFromUrls(customContent.imageUrls, customContent.contentType);
-                
-                if (imageSets.length > 1) {
-                  // Use the ref to get current image set index
-                  const currentImageSetIndex = imageSetIndexRef.current;
-                  
-                  // If we haven't rotated through all image sets yet, stay on this content
-                  if (currentImageSetIndex < imageSets.length - 1) {
-                    console.log(`${tvId} - Staying on custom content, more image sets to show (${currentImageSetIndex + 1}/${imageSets.length})`);
-                    return prevIndex; // Stay on custom content
-                  }
-                  // If we've shown all image sets, reset image set index and move to next content
-                  console.log(`${tvId} - All image sets shown, moving to next content type`);
-                  setImageSetIndex(0);
-                }
-              }
-              
-              const nextIndex = (prevIndex + 1) % contentCount;
-              console.log(`${tvId} - Regular content rotation: ${prevIndex} -> ${nextIndex} (${contentCount} total)`);
-              return nextIndex;
-            }
+            const nextIndex = (prevIndex + 1) % contentCount;
+            console.log(`${tvId} - Normal rotation: ${prevIndex} -> ${nextIndex}`);
+            return nextIndex;
           });
-        } else {
-          console.log(`${tvId} - Video is playing, skipping rotation`);
         }
       }, ROTATION_PERIOD);
       
-      console.log(`${tvId} - Rotation interval restarted after video end`);
+      console.log(`${tvId} - Rotation interval restarted after single video end`);
     }, 1000);
   };
 
   return {
     contentIndex,
     imageSetIndex,
+    videoSetIndex,
     temperature,
     pressure,
     randomText,

@@ -25,7 +25,7 @@ export const getMaxFilesForContentType = (contentType) => {
     case CONTENT_TYPES.IMAGE_QUAD:
       return Infinity; // Allow unlimited images, will show 4 at a time
     case CONTENT_TYPES.VIDEO:
-      return 1;
+      return Infinity; // Allow unlimited videos, will play sequentially
     default:
       return 0;
   }
@@ -53,6 +53,11 @@ export const getImageSetsFromUrls = (imageUrls, contentType) => {
     sets.push(imageUrls.slice(i, i + imagesPerSet));
   }
   return sets;
+};
+
+export const getVideoSetsFromUrls = (videoUrls) => {
+  // For videos, each video is its own "set" (plays one at a time)
+  return videoUrls.map(url => [url]);
 };
 
 export const validateSchedule = (formData) => {
@@ -85,8 +90,8 @@ export const validateSchedule = (formData) => {
   }
 
   if (formData.contentType === CONTENT_TYPES.VIDEO) {
-    if (formData.videoUrls.length !== 1) {
-      errors.push("Video content requires exactly 1 video file");
+    if (formData.videoUrls.length === 0) {
+      errors.push("Video content requires at least 1 video file");
     }
   }
 

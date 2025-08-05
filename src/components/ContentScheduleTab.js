@@ -307,64 +307,77 @@ const ContentScheduleTab = React.memo(() => {
     setSubmissionMessage("All images processed successfully!");
   }, [formData.contentType, uploadLargeFile]);
 
-  // Handle removing the video - memoized
-  const handleRemoveVideo = useCallback(() => {
-    setVideoFiles([]);
+  // Handle removing a specific video - memoized
+  const handleRemoveVideo = useCallback((indexToRemove) => {
+    const newVideoFiles = videoFiles.filter((_, index) => index !== indexToRemove);
+    const newVideoUrls = formData.videoUrls.filter((_, index) => index !== indexToRemove);
+    
+    setVideoFiles(newVideoFiles);
     setFormData((prev) => ({
       ...prev,
-      videoUrls: [],
+      videoUrls: newVideoUrls,
     }));
-    setSubmissionMessage("");
-  }, []);
+
+    // Update submission message based on remaining videos
+    if (newVideoFiles.length === 0) {
+      setSubmissionMessage("");
+    } else {
+      setSubmissionMessage(
+        `You have ${newVideoFiles.length} video(s). They will play sequentially, each waiting for the previous to finish.`
+      );
+    }
+  }, [videoFiles, formData.videoUrls]);
 
   // Handle video file upload with support for larger files - memoized
   const handleVideoUpload = useCallback(async (e) => {
     const files = Array.from(e.target.files);
 
-    if (files.length > 1) {
-      setSubmissionMessage("Error: Only one video file is allowed");
-      return;
-    }
-
     if (files.length === 0) {
       setVideoFiles([]);
       setFormData((prev) => ({ ...prev, videoUrls: [] }));
+      setSubmissionMessage("");
       return;
     }
 
-    const file = files[0];
     setVideoFiles(files);
 
-    // Process video: use base64 for small files, upload large files separately
-    try {
+    // Update message based on number of videos
+    setSubmissionMessage(
+      `You have ${files.length} video(s). They will play sequentially, each waiting for the previous to finish.`
+    );
+
+    // Process videos: use base64 for small files, upload large files separately
+    const videoUrls = [];
+    
+    for (const file of files) {
       if (file.size <= MAX_BASE64_SIZE_VIDEOS) {
         // Small video: convert to base64
-        setSubmissionMessage("Processing video...");
+        setSubmissionMessage(`Processing video ${file.name}...`);
         const base64 = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
           reader.readAsDataURL(file);
         });
-        
-        setFormData((prev) => ({
-          ...prev,
-          videoUrls: [base64],
-        }));
-        setSubmissionMessage("Video processed successfully!");
+        videoUrls.push(base64);
       } else {
         // Large video: upload to server and get URL
-        setSubmissionMessage(`Uploading large video: ${file.name}...`);
-        const uploadedUrl = await uploadLargeFile(file);
-        
-        setFormData((prev) => ({
-          ...prev,
-          videoUrls: [uploadedUrl],
-        }));
-        setSubmissionMessage("Video uploaded successfully!");
+        try {
+          setSubmissionMessage(`Uploading large video: ${file.name}...`);
+          const uploadedUrl = await uploadLargeFile(file);
+          videoUrls.push(uploadedUrl);
+        } catch (error) {
+          setSubmissionMessage(`Error uploading ${file.name}: ${error.message}`);
+          return;
+        }
       }
-    } catch (error) {
-      setSubmissionMessage(`Error processing video ${file.name}: ${error.message}`);
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      videoUrls: videoUrls,
+    }));
+
+    setSubmissionMessage("All videos processed successfully!");
   }, [uploadLargeFile]);
 
   // Handle form submission - memoized
@@ -400,8 +413,8 @@ const ContentScheduleTab = React.memo(() => {
       }
 
       if (formData.contentType === "VIDEO") {
-        if (videoFiles.length !== 1) {
-          throw new Error("Video content requires exactly 1 video file");
+        if (videoFiles.length === 0) {
+          throw new Error("Video content requires at least 1 video file");
         }
       }
 
@@ -801,12 +814,13 @@ const ContentScheduleTab = React.memo(() => {
                     accept="video/*"
                     onChange={handleVideoUpload}
                     className="file-input"
+                    multiple
                   />
                   <div className="upload-icon">🎥</div>
                   <div>
-                    <strong>Choose Video</strong>
+                    <strong>Choose Videos</strong>
                     <div className="upload-help">
-                      Select 1 video file (MP4, WebM, OGG)
+                      Select multiple video files (MP4, WebM, OGG) - they will play sequentially
                     </div>
                   </div>
                 </label>
@@ -818,7 +832,7 @@ const ContentScheduleTab = React.memo(() => {
                         <button
                           type="button"
                           className="remove-image-btn"
-                          onClick={handleRemoveVideo}
+                          onClick={() => handleRemoveVideo(index)}
                           title="Remove this video"
                         >
                           ✕
