@@ -72,7 +72,7 @@ const ContentScheduleTab = React.memo(() => {
         // Get the actual error message from the response
         const errorText = await response.text();
         console.log(`Upload error response: ${errorText}`);
-        throw new Error(`Upload failed (${response.status}): ${errorText}`);
+        throw new Error(`Upload failed (${response.status}): ${errorText}. Please ensure backend is restarted with updated WebSecurityConfig.java`);
       }
 
       const result = await response.json();
@@ -83,10 +83,12 @@ const ContentScheduleTab = React.memo(() => {
       console.warn(`File upload failed for ${file.name}:`, error.message);
       
       // Fallback to base64 if upload endpoint is not available
-      // But warn about potential size issues
-      if (file.size > MAX_FALLBACK_SIZE) { // 50MB
-        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 50MB.`);
+      // But warn about potential size issues and reject large files
+      if (file.size > MAX_FALLBACK_SIZE) { // 10MB
+        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Upload endpoint unavailable and file exceeds ${MAX_FALLBACK_SIZE / (1024 * 1024)}MB limit. Please restart backend with updated WebSecurityConfig.java to enable file uploads.`);
       }
+      
+      console.warn(`Falling back to base64 for ${file.name}. File uploads will work better when backend is restarted.`);
       
       // Convert to base64 as fallback
       const base64 = await new Promise((resolve, reject) => {
