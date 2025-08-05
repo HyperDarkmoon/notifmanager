@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import company from "../imgs/company.png";
+import { API_ENDPOINTS } from "../config/apiConfig";
 import "../styles/auth.css";
 
 function Login({ onLogin }) {
@@ -15,7 +16,7 @@ function Login({ onLogin }) {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:8090/api/auth/signin", {
+      const response = await fetch(API_ENDPOINTS.SIGNIN, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

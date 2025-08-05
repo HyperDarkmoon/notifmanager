@@ -3,6 +3,7 @@ import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate } from "../utils/contentScheduleUtils";
 import { getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
 
@@ -59,7 +60,7 @@ const TVProfilesTab = React.memo(() => {
   const fetchProfiles = useCallback(async () => {
     setIsLoadingProfiles(true);
     try {
-      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles");
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles`);
       const data = await response.json();
       setProfiles(data);
     } catch (error) {
@@ -73,7 +74,7 @@ const TVProfilesTab = React.memo(() => {
   const fetchAssignments = useCallback(async () => {
     setIsLoadingAssignments(true);
     try {
-      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assignments");
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/assignments`);
       const data = await response.json();
       setAssignments(data);
     } catch (error) {
@@ -90,7 +91,7 @@ const TVProfilesTab = React.memo(() => {
       formData.append('file', file);
 
       const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content/upload-file",
+        `${API_ENDPOINTS.BASE_URL}/api/content/upload-file`,
         {
           method: "POST",
           body: formData,
@@ -502,7 +503,7 @@ const TVProfilesTab = React.memo(() => {
 
       console.log("Submitting profile data:", submissionData);
 
-      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles", {
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles`, {
         method: "POST",
         body: JSON.stringify(submissionData)
       });
@@ -556,14 +557,14 @@ const TVProfilesTab = React.memo(() => {
 
     try {
       // First, get all assignments for this profile and delete them
-      const assignmentsResponse = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assignments");
+      const assignmentsResponse = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/assignments`);
       if (assignmentsResponse.ok) {
         const allAssignments = await assignmentsResponse.json();
         const profileAssignments = allAssignments.filter(assignment => assignment.profile?.id === profileId);
         
         // Delete each assignment for this profile
         for (const assignment of profileAssignments) {
-          const deleteAssignmentResponse = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/assignments/${assignment.id}`, {
+          const deleteAssignmentResponse = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/assignments/${assignment.id}`, {
             method: "DELETE"
           });
           
@@ -574,7 +575,7 @@ const TVProfilesTab = React.memo(() => {
       }
 
       // Then delete the profile
-      const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/${profileId}`, {
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/${profileId}`, {
         method: "DELETE"
       });
       
@@ -612,7 +613,7 @@ const TVProfilesTab = React.memo(() => {
         throw new Error("Please select both a TV and a profile");
       }
 
-      const response = await makeAuthenticatedRequest("http://localhost:8090/api/profiles/assign", {
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/assign`, {
         method: "POST",
         body: JSON.stringify({
           tvName: assignmentFormData.tvName,
@@ -649,7 +650,7 @@ const TVProfilesTab = React.memo(() => {
     if (!window.confirm("Are you sure you want to unassign this profile?")) return;
 
     try {
-      const response = await makeAuthenticatedRequest(`http://localhost:8090/api/profiles/assignments/${assignmentId}`, {
+      const response = await makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/api/profiles/assignments/${assignmentId}`, {
         method: "DELETE"
       });
 

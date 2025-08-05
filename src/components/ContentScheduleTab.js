@@ -3,6 +3,7 @@ import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate, getImagesPerSetForContentType } from "../utils/contentScheduleUtils";
 import { getInitialFormData, getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
 
@@ -29,7 +30,7 @@ const ContentScheduleTab = React.memo(() => {
     setIsLoading(true);
     try {
       const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content/all"
+        API_ENDPOINTS.CONTENT_ALL
       );
       const data = await response.json();
       setSchedules(data);
@@ -59,7 +60,7 @@ const ContentScheduleTab = React.memo(() => {
       console.log(`Attempting to upload ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
 
       // Try direct fetch with proper CORS handling
-      const response = await fetch("http://localhost:8090/api/content/upload-file", {
+      const response = await fetch(API_ENDPOINTS.CONTENT_UPLOAD, {
         method: "POST",
         mode: "cors", // Explicitly set CORS mode
         body: formData,
@@ -517,7 +518,7 @@ const ContentScheduleTab = React.memo(() => {
       console.log("=== END DEBUG ===");
 
       const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content/from-request",
+        API_ENDPOINTS.CONTENT_CREATE,
         {
           method: "POST",
           body: JSON.stringify(submissionData),
@@ -555,7 +556,7 @@ const ContentScheduleTab = React.memo(() => {
 
     try {
       await makeAuthenticatedRequest(
-        `http://localhost:8090/api/content/${scheduleId}`,
+        API_ENDPOINTS.CONTENT_BY_ID(scheduleId),
         {
           method: "DELETE",
         }
@@ -591,7 +592,7 @@ const ContentScheduleTab = React.memo(() => {
       };
 
       await makeAuthenticatedRequest(
-        `http://localhost:8090/api/content/${schedule.id}`,
+        API_ENDPOINTS.CONTENT_BY_ID(schedule.id),
         {
           method: "PUT",
           body: JSON.stringify(updatedSchedule),

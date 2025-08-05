@@ -1,5 +1,6 @@
 import { debugAuthenticatedApiCall } from "./authenticatedApi";
 import { getImageSetsFromUrls, getImagesPerSetForContentType } from "./contentScheduleUtils";
+import { API_ENDPOINTS } from "../config/apiConfig";
 
 // Shared constants
 export const ROTATION_PERIOD = 5000; // 5 seconds per content type
@@ -46,7 +47,7 @@ export const fetchCustomContent = async (
     let profileAssignment = null;
     try {
       const assignmentResponse = await debugAuthenticatedApiCall(
-        `http://localhost:8090/api/profiles/tv/${tvId}`,
+        `${API_ENDPOINTS.BASE_URL}/api/profiles/tv/${tvId}`,
         {
           method: "GET",
         }
@@ -95,7 +96,7 @@ export const fetchCustomContent = async (
     console.log(`${tvId} - No active profile assignment, checking content schedules`);
 
     const schedules = await debugAuthenticatedApiCall(
-      `http://localhost:8090/api/content/tv/${tvId}`,
+      `${API_ENDPOINTS.BASE_URL}/api/content/tv/${tvId}`,
       {
         method: "GET",
       }
