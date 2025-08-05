@@ -56,28 +56,35 @@ const ContentScheduleTab = React.memo(() => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await makeAuthenticatedRequest(
-        "http://localhost:8090/api/content/upload-file",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      console.log(`Attempting to upload ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+
+      // Try direct fetch with proper CORS handling
+      const response = await fetch("http://localhost:8090/api/content/upload-file", {
+        method: "POST",
+        mode: "cors", // Explicitly set CORS mode
+        body: formData,
+      });
+
+      console.log(`Upload response status: ${response.status}`);
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        // Get the actual error message from the response
+        const errorText = await response.text();
+        console.log(`Upload error response: ${errorText}`);
+        throw new Error(`Upload failed (${response.status}): ${errorText}`);
       }
 
       const result = await response.json();
+      console.log(`Upload successful:`, result);
       return result.fileUrl; // Assuming backend returns { fileUrl: "..." }
       
     } catch (error) {
-      console.warn(`File upload endpoint not available, falling back to base64 for ${file.name}:`, error.message);
+      console.warn(`File upload failed for ${file.name}:`, error.message);
       
       // Fallback to base64 if upload endpoint is not available
       // But warn about potential size issues
-      if (file.size > MAX_FALLBACK_SIZE) { // 10MB
-        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 10MB.`);
+      if (file.size > MAX_FALLBACK_SIZE) { // 50MB
+        throw new Error(`File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size for fallback is 50MB.`);
       }
       
       // Convert to base64 as fallback
@@ -415,6 +422,10 @@ const ContentScheduleTab = React.memo(() => {
       if (formData.contentType === "VIDEO") {
         if (videoFiles.length === 0) {
           throw new Error("Video content requires at least 1 video file");
+        }
+        // Also check that video URLs were successfully processed
+        if (formData.videoUrls.length === 0) {
+          throw new Error("Video files must be successfully processed before submission. Please check if video uploads completed successfully.");
         }
       }
 
