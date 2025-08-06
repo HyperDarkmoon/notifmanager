@@ -19,6 +19,10 @@ const ContentScheduleTab = React.memo(() => {
   const [imageFiles, setImageFiles] = useState([]);
   const [videoFiles, setVideoFiles] = useState([]);
   const [selectedTVFilter, setSelectedTVFilter] = useState("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(4); // Can be made configurable later
 
   // Fetch existing schedules on component mount
   useEffect(() => {
@@ -621,6 +625,7 @@ const ContentScheduleTab = React.memo(() => {
   // Handle TV filter change - memoized
   const handleTVFilterChange = useCallback((tvFilter) => {
     setSelectedTVFilter(tvFilter);
+    setCurrentPage(1); // Reset to first page when filter changes
   }, []);
 
   // Filter schedules based on selected TV - memoized
@@ -632,6 +637,33 @@ const ContentScheduleTab = React.memo(() => {
         ),
     [selectedTVFilter, schedules]
   );
+
+  // Pagination calculations - memoized
+  const paginationData = useMemo(() => {
+    const totalItems = filteredSchedules.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedSchedules = filteredSchedules.slice(startIndex, endIndex);
+    
+    return {
+      totalItems,
+      totalPages,
+      paginatedSchedules,
+      startIndex,
+      endIndex: Math.min(endIndex, totalItems)
+    };
+  }, [filteredSchedules, currentPage, itemsPerPage]);
+
+  // Handle page change - memoized
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+    // Scroll to top of schedules list when page changes
+    const schedulesSection = document.querySelector('.schedules-section');
+    if (schedulesSection) {
+      schedulesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   return (
     <>
@@ -1055,8 +1087,16 @@ const ContentScheduleTab = React.memo(() => {
             </span>
           </div>
         ) : (
-          <div className="schedules-list">
-            {filteredSchedules.map((schedule) => (
+          <>
+            {/* Pagination Info */}
+            <div className="pagination-info">
+              <span>
+                Showing {paginationData.startIndex + 1}-{paginationData.endIndex} of {paginationData.totalItems} schedules
+              </span>
+            </div>
+            
+            <div className="schedules-list">
+              {paginationData.paginatedSchedules.map((schedule) => (
               <div
                 key={schedule.id}
                 className={`schedule-card ${
@@ -1190,7 +1230,66 @@ const ContentScheduleTab = React.memo(() => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+            
+            {/* Pagination Controls */}
+            {paginationData.totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ← Previous
+                </button>
+                
+                <div className="page-numbers">
+                  {(() => {
+                    const pages = [];
+                    const maxVisible = 5;
+                    const start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                    const end = Math.min(paginationData.totalPages, start + maxVisible - 1);
+                    
+                    if (start > 1) {
+                      pages.push(1);
+                      if (start > 2) pages.push('...');
+                    }
+                    
+                    for (let i = start; i <= end; i++) {
+                      pages.push(i);
+                    }
+                    
+                    if (end < paginationData.totalPages) {
+                      if (end < paginationData.totalPages - 1) pages.push('...');
+                      pages.push(paginationData.totalPages);
+                    }
+                    
+                    return pages.map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          className={`page-number ${currentPage === page ? 'active' : ''}`}
+                          onClick={() => handlePageChange(page)}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ));
+                  })()}
+                </div>
+                
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === paginationData.totalPages}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </>
