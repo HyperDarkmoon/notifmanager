@@ -12,6 +12,9 @@
 /* TV selector styles */
 @import 'admin/tv-selectors.css';
 
+/* TV Management styles */
+@import 'admin/tv-management.css';
+
 /* Content type styles */
 @import 'admin/content-types.css';
 

@@ -58,7 +58,12 @@ export const fetchCustomContent = async (
         console.log(`${tvId} - Found profile assignment: ${assignmentResponse.profile.name}`);
       }
     } catch (error) {
-      console.log(`${tvId} - No profile assignment found or error fetching:`, error.message);
+      // Handle backend not supporting dynamic TVs gracefully
+      if (error.message.includes("No enum constant") || error.message.includes("Invalid TV name")) {
+        console.log(`${tvId} - Backend doesn't support dynamic TV '${tvId}' yet. Backend needs to be updated to remove TVEnum dependency.`);
+      } else {
+        console.log(`${tvId} - No profile assignment found or error fetching:`, error.message);
+      }
     }
 
     // If we have a profile assignment, use it and skip regular content schedules

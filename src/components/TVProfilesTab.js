@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate } from "../utils/contentScheduleUtils";
 import { getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
-import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { useTVData } from "../utils/useTVData";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
 
 const TVProfilesTab = React.memo(() => {
+  // Use dynamic TV data - include inactive TVs for admin assignment purposes
+  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(true);
   // Profile management state
   const [profiles, setProfiles] = useState([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
@@ -1122,14 +1125,22 @@ const TVProfilesTab = React.memo(() => {
                 onChange={handleAssignmentInputChange}
                 className="form-select"
                 required
+                disabled={isLoadingTVs}
               >
-                <option value="">Choose a TV...</option>
+                <option value="">
+                  {isLoadingTVs ? "Loading TVs..." : "Choose a TV..."}
+                </option>
                 {TV_OPTIONS.map((tv) => (
                   <option key={tv.value} value={tv.value}>
                     {tv.icon} {tv.label}
                   </option>
                 ))}
               </select>
+              {TV_OPTIONS.length === 0 && !isLoadingTVs && (
+                <small className="form-help error">
+                  No TVs available. Please create TVs in the TV Management tab first.
+                </small>
+              )}
             </div>
 
             <div className="form-group">

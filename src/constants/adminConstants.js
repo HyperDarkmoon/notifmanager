@@ -1,10 +1,6 @@
 // TV and Content Type Constants for Admin Panel
-export const TV_OPTIONS = [
-  { value: "TV1", label: "TV 1", icon: "📺" },
-  { value: "TV2", label: "TV 2", icon: "📺" },
-  { value: "TV3", label: "TV 3", icon: "📺" },
-  { value: "TV4", label: "TV 4", icon: "📺" },
-];
+// Note: TV_OPTIONS is now deprecated - use useTVData hook for dynamic TV management
+export const TV_OPTIONS = [];
 
 export const CONTENT_TYPES = [
   { value: "TEXT", label: "Text Content", icon: "📝" },

@@ -30,13 +30,17 @@
   padding: 2rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: calc(100vh - var(--navbar-height));
+  max-height: calc(100vh - var(--navbar-height)); /* Add max height */
   transition: margin-left 0.3s ease;
-  overflow: hidden; /* Prevent any potential scrollbars */
+  overflow-y: auto; /* Allow vertical scrolling when needed */
+  overflow-x: hidden; /* Prevent horizontal scrollbars */
 }
 
 .content-area {
-  max-width: 800px;
+  max-width: 1200px; /* Increased width for better TV grid display */
   margin: 0 auto;
+  padding-bottom: 2rem; /* Ensure space for pagination */
+  width: 100%;
 }
 
 :root {

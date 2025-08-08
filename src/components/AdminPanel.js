@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "../styles/admin.css";
 import ContentScheduleTab from "./ContentScheduleTab";
 import TVProfilesTab from "./TVProfilesTab";
+import TVManagementTab from "./TVManagementTab";
 
 function AdminPanel() {
   // Tab state
@@ -32,11 +33,19 @@ function AdminPanel() {
           <span className="tab-icon">👥</span>
           TV Profiles
         </button>
+        <button
+          className={`tab-button ${activeTab === "tvs" ? "active" : ""}`}
+          onClick={() => setActiveTab("tvs")}
+        >
+          <span className="tab-icon">📺</span>
+          TV Management
+        </button>
       </div>
 
       <div className="admin-content">
         {activeTab === "content" && <ContentScheduleTab />}
         {activeTab === "profiles" && <TVProfilesTab />}
+        {activeTab === "tvs" && <TVManagementTab />}
       </div>
     </div>
   );

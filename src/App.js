@@ -15,19 +15,34 @@ import "./styles/welcome.css";
 import "./styles/tvpage.css";
 import "./styles/auth.css";
 import "./styles/admin.css";
-import TV1 from "./tvpages/tv1";
-import TV2 from "./tvpages/tv2";
-import TV3 from "./tvpages/tv3";
-import TV4 from "./tvpages/tv4";
+import DynamicTVPage from "./components/DynamicTVPage";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import AdminPanel from "./components/AdminPanel";
+import { useTVData } from "./utils/useTVData";
 
 // Component to handle navigation and layout
 function NavigationLayoutWithLogout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarPage, setSidebarPage] = useState(1);
+  const [welcomePage, setWelcomePage] = useState(1);
   const navigate = useNavigate();
   const location = useLocation();
+  const { tvs, isLoading: isLoadingTVs } = useTVData();
+
+  // Pagination settings for sidebar
+  const SIDEBAR_TVS_PER_PAGE = 8;
+  const totalSidebarPages = Math.ceil(tvs.length / SIDEBAR_TVS_PER_PAGE);
+  const sidebarStartIndex = (sidebarPage - 1) * SIDEBAR_TVS_PER_PAGE;
+  const sidebarEndIndex = sidebarStartIndex + SIDEBAR_TVS_PER_PAGE;
+  const paginatedSidebarTVs = tvs.slice(sidebarStartIndex, sidebarEndIndex);
+
+  // Pagination settings for welcome page
+  const WELCOME_TVS_PER_PAGE = 6; // Show 4 TVs per page for better layout
+  const totalWelcomePages = Math.ceil(tvs.length / WELCOME_TVS_PER_PAGE);
+  const welcomeStartIndex = (welcomePage - 1) * WELCOME_TVS_PER_PAGE;
+  const welcomeEndIndex = welcomeStartIndex + WELCOME_TVS_PER_PAGE;
+  const paginatedWelcomeTVs = tvs.slice(welcomeStartIndex, welcomeEndIndex);
 
   // Add sidebar state class to body
   useEffect(() => {
@@ -38,20 +53,25 @@ function NavigationLayoutWithLogout({ onLogout }) {
     }, 300);
   }, [sidebarOpen]);
 
-  // Get current TV number from the path
-  const getCurrentTV = () => {
+  // Get current TV name from the path
+  const getCurrentTVName = () => {
     const path = location.pathname;
-    if (path === "/tv1") return 1;
-    if (path === "/tv2") return 2;
-    if (path === "/tv3") return 3;
-    if (path === "/tv4") return 4;
-    return null;
+    const tvMatch = path.match(/^\/tv\/(.+)$/);
+    return tvMatch ? tvMatch[1] : null;
   };
 
-  const selectedTV = getCurrentTV();
+  const selectedTVName = getCurrentTVName();
 
-  const handleTVSelection = (tvNumber) => {
-    navigate(`/tv${tvNumber}`);
+  const handleTVSelection = (tvName) => {
+    navigate(`/tv/${tvName}`);
+  };
+
+  const handleSidebarPageChange = (page) => {
+    setSidebarPage(page);
+  };
+
+  const handleWelcomePageChange = (page) => {
+    setWelcomePage(page);
   };
 
   return (
@@ -79,18 +99,60 @@ function NavigationLayoutWithLogout({ onLogout }) {
       <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <h3 className="sidebar-title">Select TV</h3>
         <nav className="tv-menu">
-          {[1, 2, 3, 4].map((tvNumber) => (
-            <button
-              key={tvNumber}
-              className={`tv-menu-item ${
-                selectedTV === tvNumber ? "active" : ""
-              }`}
-              onClick={() => handleTVSelection(tvNumber)}
-            >
-              <div className="tv-menu-icon">📺</div>
-              <span>TV {tvNumber}</span>
-            </button>
-          ))}
+          {isLoadingTVs ? (
+            <div className="loading-message">Loading TVs...</div>
+          ) : tvs.length === 0 ? (
+            <div className="no-content">
+              <span>No TVs available</span>
+            </div>
+          ) : (
+            <>
+              {paginatedSidebarTVs.map((tv) => (
+                <button
+                  key={tv.value}
+                  className={`tv-menu-item ${
+                    selectedTVName === tv.value ? "active" : ""
+                  }`}
+                  onClick={() => handleTVSelection(tv.value)}
+                >
+                  <div className="tv-menu-icon">📺</div>
+                  <span>{tv.label}</span>
+                </button>
+              ))}
+              
+              {/* Sidebar Pagination */}
+              {totalSidebarPages > 1 && (
+                <div className="sidebar-pagination">
+                  <div className="sidebar-page-info">
+                    <small>
+                      {sidebarStartIndex + 1}-{Math.min(sidebarEndIndex, tvs.length)} of {tvs.length}
+                    </small>
+                  </div>
+                  <div className="sidebar-page-controls">
+                    <button
+                      className="sidebar-page-btn"
+                      onClick={() => handleSidebarPageChange(sidebarPage - 1)}
+                      disabled={sidebarPage === 1}
+                      title="Previous TVs"
+                    >
+                      ←
+                    </button>
+                    <span className="sidebar-page-current">
+                      {sidebarPage}/{totalSidebarPages}
+                    </span>
+                    <button
+                      className="sidebar-page-btn"
+                      onClick={() => handleSidebarPageChange(sidebarPage + 1)}
+                      disabled={sidebarPage === totalSidebarPages}
+                      title="Next TVs"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </nav>
       </aside>
 
@@ -98,29 +160,104 @@ function NavigationLayoutWithLogout({ onLogout }) {
       <main className="main-content">
         <div className="content-area">
           <Routes>
-            <Route path="/tv1" element={<TV1 />} />
-            <Route path="/tv2" element={<TV2 />} />
-            <Route path="/tv3" element={<TV3 />} />
-            <Route path="/tv4" element={<TV4 />} />
+            <Route path="/tv/:tvName" element={<DynamicTVPage />} />
             <Route
               path="/"
               element={
                 <div className="welcome-section">
                   <h1>Welcome to Notification Manager</h1>
                   <p>Select a TV from the sidebar to manage notifications</p>
+                  
+                  {/* TV Count Info */}
+                  {!isLoadingTVs && tvs.length > 0 && (
+                    <div className="tv-count-info">
+                      <span>
+                        Showing {welcomeStartIndex + 1}-{Math.min(welcomeEndIndex, tvs.length)} of {tvs.length} TV{tvs.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="tv-grid">
-                    {[1, 2, 3, 4].map((tvNumber) => (
-                      <div
-                        key={tvNumber}
-                        className="tv-card-preview"
-                        onClick={() => handleTVSelection(tvNumber)}
-                      >
-                        <div className="tv-icon">📺</div>
-                        <h3>Television {tvNumber}</h3>
-                        <p>Click to manage</p>
+                    {isLoadingTVs ? (
+                      <div className="loading-message">Loading TVs...</div>
+                    ) : tvs.length === 0 ? (
+                      <div className="no-content">
+                        <div className="empty-icon">📺</div>
+                        <span>No TVs available. Contact admin to add TVs.</span>
                       </div>
-                    ))}
+                    ) : (
+                      paginatedWelcomeTVs.map((tv) => (
+                        <div
+                          key={tv.value}
+                          className="tv-card-preview"
+                          onClick={() => handleTVSelection(tv.value)}
+                        >
+                          <div className="tv-icon">📺</div>
+                          <h3>{tv.label}</h3>
+                          <p>Click to manage</p>
+                          {tv.location && <small>{tv.location}</small>}
+                        </div>
+                      ))
+                    )}
                   </div>
+                  
+                  {/* Welcome Page Pagination */}
+                  {!isLoadingTVs && totalWelcomePages > 1 && (
+                    <div className="welcome-pagination">
+                      <button
+                        className="pagination-btn"
+                        onClick={() => handleWelcomePageChange(welcomePage - 1)}
+                        disabled={welcomePage === 1}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      <div className="page-numbers">
+                        {(() => {
+                          const pages = [];
+                          const maxVisible = 5;
+                          const start = Math.max(1, welcomePage - Math.floor(maxVisible / 2));
+                          const end = Math.min(totalWelcomePages, start + maxVisible - 1);
+                          
+                          if (start > 1) {
+                            pages.push(1);
+                            if (start > 2) pages.push('...');
+                          }
+                          
+                          for (let i = start; i <= end; i++) {
+                            pages.push(i);
+                          }
+                          
+                          if (end < totalWelcomePages) {
+                            if (end < totalWelcomePages - 1) pages.push('...');
+                            pages.push(totalWelcomePages);
+                          }
+                          
+                          return pages.map((page, index) => (
+                            page === '...' ? (
+                              <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
+                            ) : (
+                              <button
+                                key={page}
+                                className={`page-number ${welcomePage === page ? 'active' : ''}`}
+                                onClick={() => handleWelcomePageChange(page)}
+                              >
+                                {page}
+                              </button>
+                            )
+                          ));
+                        })()}
+                      </div>
+                      
+                      <button
+                        className="pagination-btn"
+                        onClick={() => handleWelcomePageChange(welcomePage + 1)}
+                        disabled={welcomePage === totalWelcomePages}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
                 </div>
               }
             />

@@ -9,12 +9,9 @@ export const CONTENT_TYPES = {
   EMBED: "EMBED",
 };
 
-export const TV_ENUM = {
-  TV1: "TV1",
-  TV2: "TV2",
-  TV3: "TV3",
-  TV4: "TV4",
-};
+// TV_ENUM is now deprecated - TVs are managed dynamically
+// This enum is kept for backward compatibility but should not be used in new code
+export const TV_ENUM = {};
 
 export const getMaxFilesForContentType = (contentType) => {
   switch (contentType) {

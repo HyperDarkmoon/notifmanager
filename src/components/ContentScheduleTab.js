@@ -2,12 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { makeAuthenticatedRequest } from "../utils/authenticatedApi";
 import { formatScheduleDate, getImagesPerSetForContentType } from "../utils/contentScheduleUtils";
 import { getInitialFormData, getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
-import { TV_OPTIONS, CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
+import { useTVData } from "../utils/useTVData";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
 
 const ContentScheduleTab = React.memo(() => {
+  // Use dynamic TV data
+  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData();
+  
   // Form state - use memoized initial data
   const [formData, setFormData] = useState(() => getInitialFormData());
 
@@ -714,19 +718,27 @@ const ContentScheduleTab = React.memo(() => {
           <div className="form-section">
             <h2>Target TVs *</h2>
             <div className="tv-selector">
-              {TV_OPTIONS.map((tv) => (
-                <button
-                  key={tv.value}
-                  type="button"
-                  className={`tv-select-btn ${
-                    formData.targetTVs.includes(tv.value) ? "selected" : ""
-                  }`}
-                  onClick={() => handleTVSelection(tv.value)}
-                >
-                  <div className="tv-icon">{tv.icon}</div>
-                  <span>{tv.label}</span>
-                </button>
-              ))}
+              {isLoadingTVs ? (
+                <div className="loading-message">Loading TVs...</div>
+              ) : TV_OPTIONS.length === 0 ? (
+                <div className="no-content">
+                  <span>No TVs available. Please create TVs in the TV Management tab first.</span>
+                </div>
+              ) : (
+                TV_OPTIONS.map((tv) => (
+                  <button
+                    key={tv.value}
+                    type="button"
+                    className={`tv-select-btn ${
+                      formData.targetTVs.includes(tv.value) ? "selected" : ""
+                    }`}
+                    onClick={() => handleTVSelection(tv.value)}
+                  >
+                    <div className="tv-icon">{tv.icon}</div>
+                    <span>{tv.label}</span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -1058,7 +1070,7 @@ const ContentScheduleTab = React.memo(() => {
             >
               All TVs
             </button>
-            {TV_OPTIONS.map((tv) => (
+            {!isLoadingTVs && TV_OPTIONS.map((tv) => (
               <button
                 key={tv.value}
                 className={`tv-filter-btn ${
