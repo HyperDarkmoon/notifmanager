@@ -7,6 +7,7 @@ import { useTVData } from "../utils/useTVData";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
+import SearchableDropdown from "./SearchableDropdown";
 
 const ContentScheduleTab = React.memo(() => {
   // Use dynamic TV data
@@ -717,7 +718,7 @@ const ContentScheduleTab = React.memo(() => {
           {/* Target TVs */}
           <div className="form-section">
             <h2>Target TVs *</h2>
-            <div className="tv-selector">
+            <div className="tv-selector-dropdown">
               {isLoadingTVs ? (
                 <div className="loading-message">Loading TVs...</div>
               ) : TV_OPTIONS.length === 0 ? (
@@ -725,21 +726,27 @@ const ContentScheduleTab = React.memo(() => {
                   <span>No TVs available. Please create TVs in the TV Management tab first.</span>
                 </div>
               ) : (
-                TV_OPTIONS.map((tv) => (
-                  <button
-                    key={tv.value}
-                    type="button"
-                    className={`tv-select-btn ${
-                      formData.targetTVs.includes(tv.value) ? "selected" : ""
-                    }`}
-                    onClick={() => handleTVSelection(tv.value)}
-                  >
-                    <div className="tv-icon">{tv.icon}</div>
-                    <span>{tv.label}</span>
-                  </button>
-                ))
+                <SearchableDropdown
+                  options={TV_OPTIONS}
+                  selectedValues={formData.targetTVs}
+                  onSelectionChange={(selectedTVs) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      targetTVs: selectedTVs
+                    }));
+                  }}
+                  placeholder="Select target TVs..."
+                  multiple={true}
+                  isLoading={isLoadingTVs}
+                  emptyMessage="No TVs available. Please create TVs in the TV Management tab first."
+                />
               )}
             </div>
+            {formData.targetTVs.length === 0 && (
+              <div className="form-help error">
+                Please select at least one TV to display this content.
+              </div>
+            )}
           </div>
 
           {/* Content Type */}
