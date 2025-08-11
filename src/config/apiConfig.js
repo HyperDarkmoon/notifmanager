@@ -2,7 +2,7 @@
 // For network access: Set REACT_APP_API_URL in .env file to your machine's IP
 // For localhost development: Use http://localhost:8090
 // To find your IP: run 'ipconfig' on Windows or 'ifconfig' on Mac/Linux
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8090';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://10.41.15.227:8090';
 
 // API endpoints
 export const API_ENDPOINTS = {
