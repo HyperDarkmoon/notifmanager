@@ -41,7 +41,7 @@ const SearchableDropdown = ({
         : [...selectedValues, optionValue];
       onSelectionChange(newSelection);
     } else {
-      onSelectionChange([optionValue]);
+      onSelectionChange(optionValue); // Single value for filter mode
       setIsOpen(false);
       setSearchTerm('');
     }
@@ -56,12 +56,19 @@ const SearchableDropdown = ({
 
   // Get display text for selected items
   const getSelectedItemsDisplay = () => {
-    if (selectedValues.length === 0) return placeholder;
-    if (selectedValues.length === 1) {
-      const selectedOption = options.find(opt => opt.value === selectedValues[0]);
-      return selectedOption ? selectedOption.label : selectedValues[0];
+    if (multiple) {
+      if (selectedValues.length === 0) return placeholder;
+      if (selectedValues.length === 1) {
+        const selectedOption = options.find(opt => opt.value === selectedValues[0]);
+        return selectedOption ? selectedOption.label : selectedValues[0];
+      }
+      return `${selectedValues.length} TVs selected`;
+    } else {
+      // Single selection mode
+      if (!selectedValues) return placeholder;
+      const selectedOption = options.find(opt => opt.value === selectedValues);
+      return selectedOption ? selectedOption.label : selectedValues;
     }
-    return `${selectedValues.length} TVs selected`;
   };
 
   return (
@@ -72,7 +79,7 @@ const SearchableDropdown = ({
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="dropdown-display">
-          {selectedValues.length > 0 && multiple ? (
+          {multiple && selectedValues.length > 0 ? (
             <div className="selected-items">
               {selectedValues.map(value => {
                 const option = options.find(opt => opt.value === value);
@@ -93,7 +100,9 @@ const SearchableDropdown = ({
               })}
             </div>
           ) : (
-            <span className={`placeholder ${selectedValues.length === 0 ? 'empty' : ''}`}>
+            <span className={`placeholder ${
+              (multiple && selectedValues.length === 0) || (!multiple && !selectedValues) ? 'empty' : ''
+            }`}>
               {getSelectedItemsDisplay()}
             </span>
           )}
@@ -132,7 +141,12 @@ const SearchableDropdown = ({
               filteredOptions.map(option => (
                 <div
                   key={option.value}
-                  className={`dropdown-option ${selectedValues.includes(option.value) ? 'selected' : ''}`}
+                  className={`dropdown-option ${
+                    multiple 
+                      ? selectedValues.includes(option.value) 
+                      : selectedValues === option.value
+                    ? 'selected' : ''
+                  }`}
                   onClick={() => handleOptionClick(option.value)}
                 >
                   <div className="option-content">
@@ -144,7 +158,9 @@ const SearchableDropdown = ({
                       )}
                     </div>
                   </div>
-                  {selectedValues.includes(option.value) && (
+                  {(multiple 
+                    ? selectedValues.includes(option.value) 
+                    : selectedValues === option.value) && (
                     <div className="option-checkmark">✓</div>
                   )}
                 </div>

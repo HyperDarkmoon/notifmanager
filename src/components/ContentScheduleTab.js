@@ -1068,26 +1068,19 @@ const ContentScheduleTab = React.memo(() => {
         {/* TV Filter */}
         <div className="tv-filter-section">
           <label className="tv-filter-label">Filter by TV:</label>
-          <div className="tv-filter-options">
-            <button
-              className={`tv-filter-btn all ${
-                selectedTVFilter === "all" ? "active" : ""
-              }`}
-              onClick={() => handleTVFilterChange("all")}
-            >
-              All TVs
-            </button>
-            {!isLoadingTVs && TV_OPTIONS.map((tv) => (
-              <button
-                key={tv.value}
-                className={`tv-filter-btn ${
-                  selectedTVFilter === tv.value ? "active" : ""
-                }`}
-                onClick={() => handleTVFilterChange(tv.value)}
-              >
-                {tv.icon} {tv.label}
-              </button>
-            ))}
+          <div className="tv-filter-dropdown">
+            <SearchableDropdown
+              options={[
+                { value: "all", label: "All TVs", icon: "📺" },
+                ...TV_OPTIONS
+              ]}
+              selectedValues={selectedTVFilter}
+              onSelectionChange={handleTVFilterChange}
+              placeholder="Select TV to filter..."
+              multiple={false}
+              isLoading={isLoadingTVs}
+              emptyMessage="No TVs available"
+            />
           </div>
         </div>
 

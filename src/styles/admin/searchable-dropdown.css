@@ -9,6 +9,50 @@
   margin-top: 1rem;
 }
 
+/* TV Filter specific styling */
+.tv-filter-section {
+  margin-bottom: 2rem;
+}
+
+.tv-filter-label {
+  display: block;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.tv-filter-dropdown {
+  max-width: 300px;
+}
+
+.tv-filter-dropdown .dropdown-trigger {
+  padding: 0.75rem 1rem;
+  min-height: 2.5rem;
+  background: #f8f9fa;
+  border-color: #e2e8f0;
+}
+
+.tv-filter-dropdown .dropdown-trigger:hover {
+  background: white;
+  border-color: #cbd5e0;
+}
+
+.tv-filter-dropdown .dropdown-trigger.open {
+  background: white;
+  border-color: #667eea;
+}
+
+.tv-filter-dropdown .placeholder {
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.tv-filter-dropdown .placeholder.empty {
+  color: #a0aec0;
+  font-weight: normal;
+}
+
 /* Form help for errors */
 .form-help.error {
   color: #e53e3e;
