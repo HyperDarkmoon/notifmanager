@@ -164,19 +164,31 @@ try {
         if (Test-Path "build") {
             Write-Log "Using production build"
             
-            # Check if serve is available
-            if (Get-Command serve -ErrorAction SilentlyContinue) {
-                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+            # Use npx serve which is more reliable than direct serve command
+            try {
+                Write-Log "Starting production server with npx serve..."
+                $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru
                 $frontendStarted = $true
-            } else {
-                Write-Log "Installing serve globally..."
-                Start-Process -FilePath "npm" -ArgumentList "install", "-g", "serve" -Wait -WindowStyle Hidden
-                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                $frontendStarted = $true
+            } catch {
+                Write-Log "npx serve failed, trying alternative approach..." "Warning"
+                try {
+                    # Try installing serve first, then use npx
+                    Write-Log "Installing serve package..."
+                    Start-Process -FilePath "npm" -ArgumentList "install", "-g", "serve" -Wait -WindowStyle Hidden
+                    Start-Sleep -Seconds 2
+                    
+                    # Use npx again after installation
+                    $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru
+                    $frontendStarted = $true
+                } catch {
+                    Write-Log "All production server methods failed, falling back to development server..." "Warning"
+                    $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
+                    $frontendStarted = $true
+                }
             }
         } else {
             Write-Log "Using development server"
-            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
             $frontendStarted = $true
         }
         
@@ -195,8 +207,8 @@ try {
     }
     
     Write-Log "Notification Manager System startup completed"
-    Write-Log "Access the application at: http://localhost:3000"
-    Write-Log "Backend API available at: http://localhost:8090"
+    Write-Log "Access the application at: http://10.47.15.227:3000"
+    Write-Log "Backend API available at: http://10.47.15.227:8090"
     
 } catch {
     Write-Log "Error during startup: $($_.Exception.Message)" "Error"
