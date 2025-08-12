@@ -164,27 +164,15 @@ try {
         if (Test-Path "build") {
             Write-Log "Using production build"
             
-            # Use npx serve which is more reliable than direct serve command
+            # Use direct serve command
             try {
-                Write-Log "Starting production server with npx serve..."
-                $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru
+                Write-Log "Starting production server with serve..."
+                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru
                 $frontendStarted = $true
             } catch {
-                Write-Log "npx serve failed, trying alternative approach..." "Warning"
-                try {
-                    # Try installing serve first, then use npx
-                    Write-Log "Installing serve package..."
-                    Start-Process -FilePath "npm" -ArgumentList "install", "-g", "serve" -Wait -WindowStyle Hidden
-                    Start-Sleep -Seconds 2
-                    
-                    # Use npx again after installation
-                    $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru
-                    $frontendStarted = $true
-                } catch {
-                    Write-Log "All production server methods failed, falling back to development server..." "Warning"
-                    $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
-                    $frontendStarted = $true
-                }
+                Write-Log "serve command failed, trying npm start..." "Warning"
+                $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
+                $frontendStarted = $true
             }
         } else {
             Write-Log "Using development server"
