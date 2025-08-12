@@ -163,31 +163,108 @@ try {
         # Check if build exists for production mode
         if (Test-Path "build") {
             Write-Log "Using production build"
+            Write-Log "Build directory found at: $FrontendDir\build"
+            
+            # Check if serve is available
+            try {
+                $serveVersion = & serve --version 2>&1
+                Write-Log "Serve version: $serveVersion"
+            } catch {
+                Write-Log "Serve command not found or error getting version: $($_.Exception.Message)" "Warning"
+            }
             
             # Use direct serve command
             try {
                 Write-Log "Starting production server with serve..."
-                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru
+                Write-Log "Command: serve -s build -p 3000"
+                Write-Log "Working directory: $FrontendDir"
+                
+                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                 $frontendStarted = $true
+                
+                Write-Log "Frontend process started with PID: $($frontendProcess.Id)"
+                Start-Sleep -Seconds 3
+                
+                # Check if process is still running
+                if (Get-Process -Id $frontendProcess.Id -ErrorAction SilentlyContinue) {
+                    Write-Log "Frontend process is still running"
+                } else {
+                    Write-Log "Frontend process has already exited!" "Error"
+                    Write-Log "Check logs at: $LogDir\frontend.log and $LogDir\frontend-error.log"
+                }
+                
             } catch {
-                Write-Log "serve command failed, trying npm start..." "Warning"
-                $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
+                Write-Log "serve command failed with error: $($_.Exception.Message)" "Warning"
+                Write-Log "Trying npm start fallback..."
+                
+                $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                 $frontendStarted = $true
+                Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
             }
         } else {
-            Write-Log "Using development server"
-            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru
+            Write-Log "No build directory found, using development server"
+            Write-Log "Command: npm start"
+            Write-Log "Working directory: $FrontendDir"
+            
+            # Check if package.json exists
+            if (Test-Path "package.json") {
+                Write-Log "package.json found"
+            } else {
+                Write-Log "package.json NOT found!" "Error"
+            }
+            
+            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
             $frontendStarted = $true
+            Write-Log "Development server process started with PID: $($frontendProcess.Id)"
         }
         
         Pop-Location
         
         if ($frontendStarted) {
             $frontendProcess.Id | Out-File "$LogDir\frontend.pid"
+            Write-Log "Frontend PID saved to: $LogDir\frontend.pid"
             
             # Wait for frontend to start
-            if (!(Wait-ForService -Port 3000 -ServiceName "Frontend" -TimeoutSeconds 60)) {
-                Write-Log "Frontend startup failed" "Error"
+            Write-Log "Checking if frontend process is still alive before waiting for port..."
+            if (Get-Process -Id $frontendProcess.Id -ErrorAction SilentlyContinue) {
+                Write-Log "Frontend process is alive, waiting for port 3000..."
+                
+                if (!(Wait-ForService -Port 3000 -ServiceName "Frontend" -TimeoutSeconds 60)) {
+                    Write-Log "Frontend startup failed - port not available" "Error"
+                    
+                    # Check if process is still running
+                    if (Get-Process -Id $frontendProcess.Id -ErrorAction SilentlyContinue) {
+                        Write-Log "Frontend process is still running but port 3000 is not available" "Error"
+                        Write-Log "This might indicate the process is starting on a different port or has an error"
+                    } else {
+                        Write-Log "Frontend process has crashed or exited" "Error"
+                    }
+                    
+                    # Try to read error logs if they exist
+                    if (Test-Path "$LogDir\frontend-error.log") {
+                        Write-Log "Frontend error log contents:"
+                        $errorContent = Get-Content "$LogDir\frontend-error.log" -Raw -ErrorAction SilentlyContinue
+                        if ($errorContent) {
+                            Write-Log $errorContent "Error"
+                        } else {
+                            Write-Log "Error log is empty"
+                        }
+                    }
+                    
+                    if (Test-Path "$LogDir\frontend.log") {
+                        Write-Log "Frontend output log contents:"
+                        $outputContent = Get-Content "$LogDir\frontend.log" -Raw -ErrorAction SilentlyContinue
+                        if ($outputContent) {
+                            Write-Log $outputContent "Info"
+                        } else {
+                            Write-Log "Output log is empty"
+                        }
+                    }
+                } else {
+                    Write-Log "Frontend started successfully on port 3000"
+                }
+            } else {
+                Write-Log "Frontend process died immediately after starting!" "Error"
             }
         }
     } else {
