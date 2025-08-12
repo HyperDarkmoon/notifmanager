@@ -176,10 +176,11 @@ try {
             # Use direct serve command
             try {
                 Write-Log "Starting production server with serve..."
-                Write-Log "Command: serve -s build -p 3000"
+                Write-Log "Command: npx serve -s build -p 3000"
                 Write-Log "Working directory: $FrontendDir"
                 
-                $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                # Use npx to avoid executable compatibility issues
+                $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                 $frontendStarted = $true
                 
                 Write-Log "Frontend process started with PID: $($frontendProcess.Id)"
@@ -191,15 +192,27 @@ try {
                 } else {
                     Write-Log "Frontend process has already exited!" "Error"
                     Write-Log "Check logs at: $LogDir\frontend.log and $LogDir\frontend-error.log"
+                    throw "npx serve process exited immediately"
                 }
                 
             } catch {
-                Write-Log "serve command failed with error: $($_.Exception.Message)" "Warning"
-                Write-Log "Trying npm start fallback..."
+                Write-Log "npx serve failed with error: $($_.Exception.Message)" "Warning"
+                Write-Log "Trying alternative approach with cmd.exe..."
                 
-                $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                $frontendStarted = $true
-                Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
+                try {
+                    # Try using cmd.exe to run npx serve
+                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx serve -s build -p 3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    $frontendStarted = $true
+                    Write-Log "Alternative cmd.exe approach started with PID: $($frontendProcess.Id)"
+                    
+                } catch {
+                    Write-Log "cmd.exe approach also failed: $($_.Exception.Message)" "Warning"
+                    Write-Log "Falling back to npm start..."
+                    
+                    $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    $frontendStarted = $true
+                    Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
+                }
             }
         } else {
             Write-Log "No build directory found, using development server"
