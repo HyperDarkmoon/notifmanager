@@ -15,10 +15,12 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:local": "copy .env.local .env && react-scripts start",
+    "start:production": "copy .env.production .env && react-scripts start",
     "start:network": "set HOST=10.41.15.227&& set HTTPS=false&& react-scripts start",
-    "start:production": "set HOST=10.41.15.227&& set HTTPS=false&& set REACT_APP_API_URL=http://10.41.15.227:8090&& react-scripts start",
     "build": "react-scripts build",
-    "build:production": "set REACT_APP_API_URL=http://10.41.15.227:8090&& react-scripts build",
+    "build:local": "copy .env.local .env && react-scripts build",
+    "build:production": "copy .env.production .env && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

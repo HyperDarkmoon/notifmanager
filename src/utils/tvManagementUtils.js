@@ -1,8 +1,48 @@
 import { makeAuthenticatedRequest } from "./authenticatedApi";
+import { makePublicRequest } from "./publicApi";
 import { API_ENDPOINTS } from "../config/apiConfig";
 
 // Fetch all TVs (for admin)
 export const fetchAllTVs = async () => {
+  return fetchAllTVsAuthenticated();
+};
+
+// Fetch active TVs (for regular users) - PUBLIC ACCESS
+export const fetchActiveTVs = async () => {
+  try {
+    const response = await makePublicRequest(API_ENDPOINTS.TVS_ACTIVE, {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching active TVs:", error);
+    throw error;
+  }
+};
+
+// Fetch TV by name - PUBLIC ACCESS
+export const fetchTVByName = async (name) => {
+  try {
+    const response = await makePublicRequest(API_ENDPOINTS.TV_BY_NAME(name), {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching TV ${name}:`, error);
+    throw error;
+  }
+};
+
+// ADMIN ONLY FUNCTIONS - Require Authentication
+
+// Fetch all TVs (for admin) - AUTHENTICATED
+export const fetchAllTVsAuthenticated = async () => {
   try {
     const response = await makeAuthenticatedRequest(API_ENDPOINTS.TVS_ALL, {
       method: "GET",
@@ -17,8 +57,8 @@ export const fetchAllTVs = async () => {
   }
 };
 
-// Fetch active TVs (for regular users)
-export const fetchActiveTVs = async () => {
+// Fetch active TVs (for admin verification) - AUTHENTICATED
+export const fetchActiveTVsAuthenticated = async () => {
   try {
     const response = await makeAuthenticatedRequest(API_ENDPOINTS.TVS_ACTIVE, {
       method: "GET",
@@ -33,8 +73,8 @@ export const fetchActiveTVs = async () => {
   }
 };
 
-// Fetch TV by name
-export const fetchTVByName = async (name) => {
+// Fetch TV by name (for admin) - AUTHENTICATED
+export const fetchTVByNameAuthenticated = async (name) => {
   try {
     const response = await makeAuthenticatedRequest(API_ENDPOINTS.TV_BY_NAME(name), {
       method: "GET",

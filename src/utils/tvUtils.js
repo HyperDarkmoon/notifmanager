@@ -1,4 +1,4 @@
-import { debugAuthenticatedApiCall } from "./authenticatedApi";
+import { debugPublicApiCall } from "./publicApi";
 import { getImageSetsFromUrls, getImagesPerSetForContentType } from "./contentScheduleUtils";
 import { API_ENDPOINTS } from "../config/apiConfig";
 
@@ -46,7 +46,7 @@ export const fetchCustomContent = async (
     
     let profileAssignment = null;
     try {
-      const assignmentResponse = await debugAuthenticatedApiCall(
+      const assignmentResponse = await debugPublicApiCall(
         `${API_ENDPOINTS.BASE_URL}/api/profiles/tv/${tvId}`,
         {
           method: "GET",
@@ -100,7 +100,7 @@ export const fetchCustomContent = async (
     // If no profile assignment, proceed with regular content schedule fetching
     console.log(`${tvId} - No active profile assignment, checking content schedules`);
 
-    const schedules = await debugAuthenticatedApiCall(
+    const schedules = await debugPublicApiCall(
       `${API_ENDPOINTS.BASE_URL}/api/content/tv/${tvId}`,
       {
         method: "GET",

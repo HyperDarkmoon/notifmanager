@@ -22,7 +22,7 @@ import AdminPanel from "./components/AdminPanel";
 import { useTVData } from "./utils/useTVData";
 
 // Component to handle navigation and layout
-function NavigationLayoutWithLogout({ onLogout }) {
+function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarPage, setSidebarPage] = useState(1);
   const [welcomePage, setWelcomePage] = useState(1);
@@ -88,9 +88,18 @@ function NavigationLayoutWithLogout({ onLogout }) {
           <img src={company} alt="Company Logo" className="company-logo" />
           <h1 className="navbar-title">Notification Manager</h1>
           <div className="navbar-actions">
-            <button className="logout-button" onClick={onLogout}>
-              Logout
-            </button>
+            {isAuthenticated ? (
+              <button className="logout-button" onClick={onLogout}>
+                Logout
+              </button>
+            ) : (
+              <button 
+                className="login-button" 
+                onClick={() => navigate('/login')}
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -268,6 +277,60 @@ function NavigationLayoutWithLogout({ onLogout }) {
   );
 }
 
+// Login Layout with navbar
+function LoginLayout({ onLogin }) {
+  const navigate = useNavigate();
+
+  return (
+    <div className="login-layout">
+      <nav className="navbar">
+        <div className="navbar-content">
+          <img src={company} alt="Company Logo" className="company-logo" />
+          <h1 className="navbar-title">Notification Manager</h1>
+          <div className="navbar-actions">
+            <button 
+              className="login-button" 
+              onClick={() => navigate('/')}
+            >
+              Back to TVs
+            </button>
+          </div>
+        </div>
+      </nav>
+      <div className="login-content">
+        <Login onLogin={onLogin} />
+      </div>
+    </div>
+  );
+}
+
+// Signup Layout with navbar
+function SignupLayout({ onSignupSuccess }) {
+  const navigate = useNavigate();
+
+  return (
+    <div className="login-layout">
+      <nav className="navbar">
+        <div className="navbar-content">
+          <img src={company} alt="Company Logo" className="company-logo" />
+          <h1 className="navbar-title">Notification Manager</h1>
+          <div className="navbar-actions">
+            <button 
+              className="login-button" 
+              onClick={() => navigate('/')}
+            >
+              Back to TVs
+            </button>
+          </div>
+        </div>
+      </nav>
+      <div className="login-content">
+        <Signup onSignupSuccess={onSignupSuccess} />
+      </div>
+    </div>
+  );
+}
+
 // Admin Panel Layout with navigation and logout
 function AdminPanelLayout({ onLogout }) {
   // Force layout recalculation to ensure admin panel displays correctly
@@ -320,6 +383,11 @@ function App() {
       // Get user role after login
       const storedRole = localStorage.getItem("userRole");
       setUserRole(storedRole || "USER");
+      
+      // Redirect admin users to admin panel
+      if (storedRole === "ADMIN") {
+        window.location.href = "/admin";
+      }
     }
   };
 
@@ -335,20 +403,12 @@ function App() {
     setUserRole(null);
   };
 
-  // Render the appropriate layout based on user role
-  const renderAuthenticatedContent = () => {
-    if (userRole === "ADMIN") {
-      // Add admin-view class to body for admin-specific styles
-      document.body.classList.add("admin-view");
-      document.body.classList.remove("sidebar-closed");
-      document.documentElement.classList.add("admin-mode");
-      return <AdminPanelLayout onLogout={handleLogout} />;
-    } else {
-      // Remove admin-view class when not in admin mode
-      document.body.classList.remove("admin-view");
-      document.documentElement.classList.remove("admin-mode");
-      return <NavigationLayoutWithLogout onLogout={handleLogout} />;
-    }
+  // Render the appropriate layout based on authentication and user role
+  const renderContent = () => {
+    // Remove admin-view class when not in admin mode
+    document.body.classList.remove("admin-view");
+    document.documentElement.classList.remove("admin-mode");
+    return <NavigationLayoutWithLogout onLogout={handleLogout} isAuthenticated={isAuthenticated} />;
   };
 
   return (
@@ -357,32 +417,42 @@ function App() {
         <Route
           path="/login"
           element={
-            isAuthenticated ? (
-              <Navigate to="/" />
+            isAuthenticated && userRole === "ADMIN" ? (
+              <Navigate to="/admin" />
             ) : (
-              <Login onLogin={handleLogin} />
+              <LoginLayout onLogin={handleLogin} />
             )
           }
         />
         <Route
           path="/signup"
           element={
-            isAuthenticated ? (
-              <Navigate to="/" />
+            isAuthenticated && userRole === "ADMIN" ? (
+              <Navigate to="/admin" />
             ) : (
-              <Signup onSignupSuccess={handleSignupSuccess} />
+              <SignupLayout onSignupSuccess={handleSignupSuccess} />
+            )
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            isAuthenticated && userRole === "ADMIN" ? (
+              (() => {
+                // Add admin-view class to body for admin-specific styles
+                document.body.classList.add("admin-view");
+                document.body.classList.remove("sidebar-closed");
+                document.documentElement.classList.add("admin-mode");
+                return <AdminPanelLayout onLogout={handleLogout} />;
+              })()
+            ) : (
+              <Navigate to="/login" />
             )
           }
         />
         <Route
           path="*"
-          element={
-            isAuthenticated ? (
-              renderAuthenticatedContent()
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
+          element={renderContent()}
         />
       </Routes>
     </Router>

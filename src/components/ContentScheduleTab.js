@@ -11,7 +11,7 @@ import SearchableDropdown from "./SearchableDropdown";
 
 const ContentScheduleTab = React.memo(() => {
   // Use dynamic TV data
-  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData();
+  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(false, true);
   
   // Form state - use memoized initial data
   const [formData, setFormData] = useState(() => getInitialFormData());

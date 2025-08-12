@@ -55,7 +55,8 @@
   margin-left: auto;
 }
 
-.logout-button {
+.logout-button,
+.login-button {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
@@ -66,7 +67,8 @@
   transition: all 0.3s ease;
 }
 
-.logout-button:hover {
+.logout-button:hover,
+.login-button:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 }

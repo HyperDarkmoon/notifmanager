@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchActiveTVs, fetchAllTVs, formatTVsForFrontend } from "./tvManagementUtils";
+import { fetchActiveTVs, fetchAllTVsAuthenticated, formatTVsForFrontend } from "./tvManagementUtils";
 
 // Hook for managing TV data across the application
-export const useTVData = (includeInactive = false) => {
+export const useTVData = (includeInactive = false, useAuthenticated = false) => {
   const [tvs, setTvs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,8 +12,14 @@ export const useTVData = (includeInactive = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      // For admin functions, we might want all TVs including inactive ones
-      const tvsData = includeInactive ? await fetchAllTVs() : await fetchActiveTVs();
+      let tvsData;
+      if (includeInactive && useAuthenticated) {
+        // For admin functions that need all TVs including inactive ones
+        tvsData = await fetchAllTVsAuthenticated();
+      } else {
+        // For public viewing - only active TVs, no authentication required
+        tvsData = await fetchActiveTVs();
+      }
       const formattedTVs = formatTVsForFrontend(tvsData);
       setTvs(formattedTVs);
     } catch (err) {
@@ -29,7 +35,7 @@ export const useTVData = (includeInactive = false) => {
     } finally {
       setIsLoading(false);
     }
-  }, [includeInactive]);
+  }, [includeInactive, useAuthenticated]);
 
   // Fetch TVs on mount
   useEffect(() => {

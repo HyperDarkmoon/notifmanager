@@ -10,7 +10,7 @@ import DailyScheduleInput from "./DailyScheduleInput";
 
 const TVProfilesTab = React.memo(() => {
   // Use dynamic TV data - include inactive TVs for admin assignment purposes
-  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(true);
+  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(true, true);
   // Profile management state
   const [profiles, setProfiles] = useState([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
