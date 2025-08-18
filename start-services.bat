@@ -111,23 +111,20 @@ if not exist "node_modules" (
     npm install
 )
 
-REM Ensure serve package is available
-echo Ensuring serve package is available...
-npm list -g serve >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Installing serve package globally...
-    npm install -g serve --yes
-)
+REM Skip serve package installation to avoid hanging
 
 REM Check if build directory exists for production
 if exist "build" (
     echo Starting production server...
-    where serve >nul 2>&1
-    if %errorlevel% equ 0 (
-        start "Frontend Server" /min cmd /c "serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
-    ) else (
-        echo Using npx serve with auto-confirmation...
-        start "Frontend Server" /min cmd /c "echo y | npx serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
+    echo Trying npm run serve first...
+    npm run serve 2>nul
+    if %errorlevel% neq 0 (
+        echo npm run serve failed, trying http-server...
+        start "Frontend Server" /min cmd /c "npx --yes http-server build -p 3000 -a 0.0.0.0 --cors > %LOG_DIR%\frontend.log 2>&1"
+        if %errorlevel% neq 0 (
+            echo http-server failed, trying Python fallback...
+            start "Frontend Server" /min cmd /c "cd build && python -m http.server 3000 > %LOG_DIR%\frontend.log 2>&1"
+        )
     )
 ) else (
     echo Starting development server...

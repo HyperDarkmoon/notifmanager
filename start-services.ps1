@@ -261,20 +261,8 @@ try {
             Start-Process -FilePath "npm" -ArgumentList "install" -Wait -WindowStyle Hidden
         }
         
-        # Ensure serve package is available for production builds
-        Write-Log "Ensuring serve package is available..."
-        try {
-            $serveCheck = & npm list -g serve 2>&1
-            if ($serveCheck -like "*serve@*") {
-                Write-Log "Serve package is already installed globally"
-            } else {
-                Write-Log "Installing serve package globally..."
-                Start-Process -FilePath "npm" -ArgumentList "install", "-g", "serve", "--yes" -Wait -WindowStyle Hidden
-            }
-        } catch {
-            Write-Log "Installing serve package locally as fallback..."
-            Start-Process -FilePath "npm" -ArgumentList "install", "serve", "--save-dev", "--yes" -Wait -WindowStyle Hidden
-        }
+        # Skip serve package installation - use alternative methods instead
+        Write-Log "Skipping serve package installation to avoid hanging..."
         
         $frontendStarted = $false
         
@@ -283,35 +271,63 @@ try {
             Write-Log "Using production build"
             Write-Log "Build directory found at: $FrontendDir\build"
             
-            # Check if serve is available
-            try {
-                $serveVersion = & serve --version 2>&1
-                Write-Log "Serve version: $serveVersion"
-            } catch {
-                Write-Log "Serve command not found or error getting version: $($_.Exception.Message)" "Warning"
-            }
+            # Skip serve version check - it's causing issues
+            Write-Log "Starting production server with alternative methods..."
             
-            # Use direct serve command
+            # Try multiple approaches without relying on serve package
             try {
-                Write-Log "Starting production server with serve..."
-                Write-Log "Working directory: $FrontendDir"
+                Write-Log "Attempting to use npm run serve if available..."
                 
-                # Try global serve first
-                try {
-                    Write-Log "Attempting to use global serve command..."
-                    $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                    $frontendStarted = $true
-                    Write-Log "Global serve command started with PID: $($frontendProcess.Id)"
-                } catch {
-                    Write-Log "Global serve failed, trying npx with auto-install..."
-                    
-                    # Use npx with --yes flag to auto-confirm installations
-                    Write-Log "Command: npx --yes serve -s build -l 3000"
-                    $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "--yes", "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                    $frontendStarted = $true
-                    Write-Log "npx serve command started with PID: $($frontendProcess.Id)"
+                # Check if package.json has a serve script
+                $packageJsonPath = Join-Path $FrontendDir "package.json"
+                if (Test-Path $packageJsonPath) {
+                    $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                    if ($packageJson.scripts.serve) {
+                        Write-Log "Found serve script in package.json, using npm run serve..."
+                        $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "run", "serve" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                        $frontendStarted = $true
+                        Write-Log "npm run serve started with PID: $($frontendProcess.Id)"
+                    } else {
+                        throw "No serve script found in package.json"
+                    }
+                } else {
+                    throw "package.json not found"
                 }
                 
+            } catch {
+                Write-Log "npm run serve failed: $($_.Exception.Message)" "Warning"
+                Write-Log "Trying simple Python HTTP server as fallback..."
+                
+                try {
+                    # Use Python's built-in HTTP server as a reliable fallback
+                    Push-Location (Join-Path $FrontendDir "build")
+                    $frontendProcess = Start-Process -FilePath "python" -ArgumentList "-m", "http.server", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    Pop-Location
+                    $frontendStarted = $true
+                    Write-Log "Python HTTP server started with PID: $($frontendProcess.Id)"
+                    
+                } catch {
+                    Write-Log "Python HTTP server failed: $($_.Exception.Message)" "Warning"
+                    Write-Log "Trying Node.js http-server as final fallback..."
+                    
+                    try {
+                        # Try to use Node.js http-server (which should be more reliable than serve)
+                        $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "--yes", "http-server", "build", "-p", "3000", "-a", "0.0.0.0" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                        $frontendStarted = $true
+                        Write-Log "http-server started with PID: $($frontendProcess.Id)"
+                        
+                    } catch {
+                        Write-Log "http-server also failed: $($_.Exception.Message)" "Warning"
+                        Write-Log "All production methods failed, falling back to npm start..."
+                        
+                        $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                        $frontendStarted = $true
+                        Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
+                    }
+                }
+            }
+            
+            if ($frontendStarted) {
                 Start-Sleep -Seconds 5
                 
                 # Check if process is still running
@@ -320,27 +336,7 @@ try {
                 } else {
                     Write-Log "Frontend process has already exited!" "Error"
                     Write-Log "Check logs at: $LogDir\frontend.log and $LogDir\frontend-error.log"
-                    throw "serve process exited immediately"
-                }
-                
-            } catch {
-                Write-Log "Serve approaches failed with error: $($_.Exception.Message)" "Warning"
-                Write-Log "Trying alternative cmd.exe approach..."
-                
-                try {
-                    # Try using cmd.exe with echo y for auto-confirmation
-                    Write-Log "Using cmd.exe with auto-confirmation..."
-                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "echo y | npx serve -s build -l 3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                    $frontendStarted = $true
-                    Write-Log "cmd.exe auto-confirm approach started with PID: $($frontendProcess.Id)"
-                    
-                } catch {
-                    Write-Log "cmd.exe approach also failed: $($_.Exception.Message)" "Warning"
-                    Write-Log "Falling back to npm start..."
-                    
-                    $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                    $frontendStarted = $true
-                    Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
+                    $frontendStarted = $false
                 }
             }
         } else {
