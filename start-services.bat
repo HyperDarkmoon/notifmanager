@@ -111,6 +111,14 @@ if not exist "node_modules" (
     npm install
 )
 
+REM Ensure serve package is available
+echo Ensuring serve package is available...
+npm list -g serve >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Installing serve package globally...
+    npm install -g serve --yes
+)
+
 REM Check if build directory exists for production
 if exist "build" (
     echo Starting production server...
@@ -118,9 +126,8 @@ if exist "build" (
     if %errorlevel% equ 0 (
         start "Frontend Server" /min cmd /c "serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
     ) else (
-        echo Installing serve...
-        npm install -g serve
-        start "Frontend Server" /min cmd /c "serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
+        echo Using npx serve with auto-confirmation...
+        start "Frontend Server" /min cmd /c "echo y | npx serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
     )
 ) else (
     echo Starting development server...

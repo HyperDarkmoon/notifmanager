@@ -261,6 +261,21 @@ try {
             Start-Process -FilePath "npm" -ArgumentList "install" -Wait -WindowStyle Hidden
         }
         
+        # Ensure serve package is available for production builds
+        Write-Log "Ensuring serve package is available..."
+        try {
+            $serveCheck = & npm list -g serve 2>&1
+            if ($serveCheck -like "*serve@*") {
+                Write-Log "Serve package is already installed globally"
+            } else {
+                Write-Log "Installing serve package globally..."
+                Start-Process -FilePath "npm" -ArgumentList "install", "-g", "serve", "--yes" -Wait -WindowStyle Hidden
+            }
+        } catch {
+            Write-Log "Installing serve package locally as fallback..."
+            Start-Process -FilePath "npm" -ArgumentList "install", "serve", "--save-dev", "--yes" -Wait -WindowStyle Hidden
+        }
+        
         $frontendStarted = $false
         
         # Check if build exists for production mode
@@ -279,15 +294,25 @@ try {
             # Use direct serve command
             try {
                 Write-Log "Starting production server with serve..."
-                Write-Log "Command: npx serve -s build -p 3000"
                 Write-Log "Working directory: $FrontendDir"
                 
-                # Use npx to avoid executable compatibility issues
-                $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "build", "-p", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                $frontendStarted = $true
+                # Try global serve first
+                try {
+                    Write-Log "Attempting to use global serve command..."
+                    $frontendProcess = Start-Process -FilePath "serve" -ArgumentList "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    $frontendStarted = $true
+                    Write-Log "Global serve command started with PID: $($frontendProcess.Id)"
+                } catch {
+                    Write-Log "Global serve failed, trying npx with auto-install..."
+                    
+                    # Use npx with --yes flag to auto-confirm installations
+                    Write-Log "Command: npx --yes serve -s build -l 3000"
+                    $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "--yes", "serve", "-s", "build", "-l", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    $frontendStarted = $true
+                    Write-Log "npx serve command started with PID: $($frontendProcess.Id)"
+                }
                 
-                Write-Log "Frontend process started with PID: $($frontendProcess.Id)"
-                Start-Sleep -Seconds 3
+                Start-Sleep -Seconds 5
                 
                 # Check if process is still running
                 if (Get-Process -Id $frontendProcess.Id -ErrorAction SilentlyContinue) {
@@ -295,18 +320,19 @@ try {
                 } else {
                     Write-Log "Frontend process has already exited!" "Error"
                     Write-Log "Check logs at: $LogDir\frontend.log and $LogDir\frontend-error.log"
-                    throw "npx serve process exited immediately"
+                    throw "serve process exited immediately"
                 }
                 
             } catch {
-                Write-Log "npx serve failed with error: $($_.Exception.Message)" "Warning"
-                Write-Log "Trying alternative approach with cmd.exe..."
+                Write-Log "Serve approaches failed with error: $($_.Exception.Message)" "Warning"
+                Write-Log "Trying alternative cmd.exe approach..."
                 
                 try {
-                    # Try using cmd.exe to run npx serve
-                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npx serve -s build -p 3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    # Try using cmd.exe with echo y for auto-confirmation
+                    Write-Log "Using cmd.exe with auto-confirmation..."
+                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "echo y | npx serve -s build -l 3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                     $frontendStarted = $true
-                    Write-Log "Alternative cmd.exe approach started with PID: $($frontendProcess.Id)"
+                    Write-Log "cmd.exe auto-confirm approach started with PID: $($frontendProcess.Id)"
                     
                 } catch {
                     Write-Log "cmd.exe approach also failed: $($_.Exception.Message)" "Warning"
