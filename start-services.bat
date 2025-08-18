@@ -19,7 +19,7 @@ REM We'll use netstat to check ports
 
 echo Cleaning up existing processes...
 
-REM Kill existing processes on our ports
+REM Kill existing processes on our ports (not including MySQL port 3306)
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8090 " ^| findstr "LISTENING"') do (
     echo Killing process %%a on port 8090
     taskkill /PID %%a /F >nul 2>&1
@@ -32,6 +32,43 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000 " ^| findstr "LISTENIN
 
 REM Wait for processes to terminate
 timeout /t 3 /nobreak >nul
+
+echo Starting MySQL database...
+
+REM Check if MySQL is already running on port 3306
+netstat -ano | findstr ":3306 " | findstr "LISTENING" >nul
+if %errorlevel% equ 0 (
+    echo MySQL is already running on port 3306
+) else (
+    echo MySQL not detected, attempting to start...
+    
+    REM Try to start MySQL via XAMPP Control Panel
+    if exist "C:\xampp\xampp-control.exe" (
+        echo Starting MySQL via XAMPP Control Panel...
+        start "" "C:\xampp\xampp-control.exe" -start mysql
+    ) else if exist "D:\xampp\xampp-control.exe" (
+        echo Starting MySQL via XAMPP Control Panel...
+        start "" "D:\xampp\xampp-control.exe" -start mysql
+    ) else if exist "E:\xampp\xampp-control.exe" (
+        echo Starting MySQL via XAMPP Control Panel...
+        start "" "E:\xampp\xampp-control.exe" -start mysql
+    ) else (
+        REM Try to start MySQL service directly
+        echo Trying to start MySQL service...
+        net start MySQL 2>nul
+        if %errorlevel% neq 0 (
+            net start MySQL80 2>nul
+            if %errorlevel% neq 0 (
+                echo Warning: Could not start MySQL automatically
+                echo Please ensure MySQL is running on port 3306
+            )
+        )
+    )
+    
+    REM Wait for MySQL to start
+    echo Waiting for MySQL to start...
+    timeout /t 10 /nobreak >nul
+)
 
 echo Starting backend server...
 
@@ -96,8 +133,10 @@ timeout /t 10 /nobreak >nul
 echo ===========================================
 echo Notification Manager System Started
 echo ===========================================
-echo Access the application at: http://localhost:3000
-echo Backend API available at: http://localhost:8090
+echo Services status:
+echo   MySQL Database: http://localhost:3306
+echo   Frontend: http://localhost:3000
+echo   Backend API: http://localhost:8090
 echo.
 echo Logs are available at:
 echo   Backend: %LOG_DIR%\backend.log

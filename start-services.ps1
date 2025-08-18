@@ -93,8 +93,111 @@ try {
     Write-Log "Cleaning up existing processes..."
     Stop-ProcessOnPort 8090  # Backend
     Stop-ProcessOnPort 3000  # Frontend
+    # Note: Not stopping MySQL (port 3306) as it should remain running
     
     Start-Sleep -Seconds 3
+    
+    # Start MySQL/XAMPP
+    Write-Log "Starting MySQL database..."
+    
+    # Common XAMPP installation paths
+    $XamppPaths = @(
+        "C:\xampp\mysql\bin\mysqld.exe",
+        "D:\xampp\mysql\bin\mysqld.exe",
+        "E:\xampp\mysql\bin\mysqld.exe",
+        "C:\Program Files\xampp\mysql\bin\mysqld.exe",
+        "C:\Program Files (x86)\xampp\mysql\bin\mysqld.exe"
+    )
+    
+    $XamppControlPaths = @(
+        "C:\xampp\xampp-control.exe",
+        "D:\xampp\xampp-control.exe",
+        "E:\xampp\xampp-control.exe",
+        "C:\Program Files\xampp\xampp-control.exe",
+        "C:\Program Files (x86)\xampp\xampp-control.exe"
+    )
+    
+    # Check if MySQL is already running
+    $mysqlRunning = Test-Port 3306
+    if ($mysqlRunning) {
+        Write-Log "MySQL is already running on port 3306"
+    } else {
+        Write-Log "MySQL not detected, attempting to start..."
+        
+        # Try to find and start XAMPP MySQL
+        $xamppStarted = $false
+        
+        # Method 1: Try XAMPP Control Panel
+        foreach ($xamppPath in $XamppControlPaths) {
+            if (Test-Path $xamppPath) {
+                Write-Log "Found XAMPP Control at: $xamppPath"
+                try {
+                    # Start XAMPP Control Panel and try to start MySQL
+                    Write-Log "Starting MySQL via XAMPP Control Panel..."
+                    Start-Process -FilePath $xamppPath -ArgumentList "-start mysql" -WindowStyle Hidden
+                    $xamppStarted = $true
+                    break
+                } catch {
+                    Write-Log "Failed to start XAMPP Control: $($_.Exception.Message)" "Warning"
+                }
+            }
+        }
+        
+        # Method 2: Try direct MySQL service start if XAMPP Control didn't work
+        if (!$xamppStarted) {
+            Write-Log "Trying to start MySQL service directly..."
+            try {
+                $mysqlService = Get-Service -Name "MySQL*" -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($mysqlService) {
+                    Write-Log "Found MySQL service: $($mysqlService.Name)"
+                    if ($mysqlService.Status -ne "Running") {
+                        Start-Service -Name $mysqlService.Name
+                        Write-Log "Started MySQL service: $($mysqlService.Name)"
+                        $xamppStarted = $true
+                    } else {
+                        Write-Log "MySQL service is already running"
+                        $xamppStarted = $true
+                    }
+                }
+            } catch {
+                Write-Log "Failed to start MySQL service: $($_.Exception.Message)" "Warning"
+            }
+        }
+        
+        # Method 3: Try direct mysqld.exe execution
+        if (!$xamppStarted) {
+            foreach ($mysqlPath in $XamppPaths) {
+                if (Test-Path $mysqlPath) {
+                    Write-Log "Found MySQL at: $mysqlPath"
+                    try {
+                        $mysqlDir = Split-Path $mysqlPath -Parent
+                        Push-Location $mysqlDir
+                        Write-Log "Starting MySQL daemon directly..."
+                        Start-Process -FilePath $mysqlPath -ArgumentList "--console" -WindowStyle Hidden -PassThru
+                        Pop-Location
+                        $xamppStarted = $true
+                        break
+                    } catch {
+                        Write-Log "Failed to start MySQL daemon: $($_.Exception.Message)" "Warning"
+                        Pop-Location
+                    }
+                }
+            }
+        }
+        
+        if ($xamppStarted) {
+            # Wait for MySQL to start
+            Write-Log "Waiting for MySQL to start on port 3306..."
+            if (Wait-ForService -Port 3306 -ServiceName "MySQL" -TimeoutSeconds 30) {
+                Write-Log "MySQL started successfully"
+            } else {
+                Write-Log "MySQL startup may have failed - continuing anyway" "Warning"
+            }
+        } else {
+            Write-Log "Could not find or start MySQL/XAMPP automatically" "Warning"
+            Write-Log "Please ensure MySQL is running on port 3306 before starting the backend" "Warning"
+        }
+    }
     
     # Start Backend
     Write-Log "Starting backend server..."
@@ -285,8 +388,10 @@ try {
     }
     
     Write-Log "Notification Manager System startup completed"
-    Write-Log "Access the application at: http://10.47.15.227:3000"
-    Write-Log "Backend API available at: http://10.47.15.227:8090"
+    Write-Log "Services status:"
+    Write-Log "  MySQL Database: http://10.47.15.227:3306"
+    Write-Log "  Frontend: http://10.47.15.227:3000"
+    Write-Log "  Backend API: http://10.47.15.227:8090"
     
 } catch {
     Write-Log "Error during startup: $($_.Exception.Message)" "Error"
