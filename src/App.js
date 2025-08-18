@@ -19,6 +19,7 @@ import DynamicTVPage from "./components/DynamicTVPage";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import AdminPanel from "./components/AdminPanel";
+import DeviceData from "./components/DeviceData";
 import { useTVData } from "./utils/useTVData";
 
 // Component to handle navigation and layout
@@ -449,6 +450,10 @@ function App() {
               <Navigate to="/login" />
             )
           }
+        />
+        <Route
+          path="/device-data"
+          element={<DeviceData />}
         />
         <Route
           path="*"
