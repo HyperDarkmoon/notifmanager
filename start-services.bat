@@ -116,16 +116,17 @@ REM Skip serve package installation to avoid hanging
 REM Check if build directory exists for production
 if exist "build" (
     echo Starting production server...
-    echo Trying npm run serve first...
-    npm run serve 2>nul
+    echo Trying http-server...
+    start "Frontend Server" /min cmd /c "npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent > %LOG_DIR%\frontend.log 2>&1"
+    timeout /t 3 /nobreak >nul
+    
+    REM Check if the above worked, if not try npm start
+    netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul
     if %errorlevel% neq 0 (
-        echo npm run serve failed, trying http-server...
-        start "Frontend Server" /min cmd /c "npx --yes http-server build -p 3000 -a 0.0.0.0 --cors > %LOG_DIR%\frontend.log 2>&1"
-        if %errorlevel% neq 0 (
-            echo http-server failed, trying Python fallback...
-            start "Frontend Server" /min cmd /c "cd build && python -m http.server 3000 > %LOG_DIR%\frontend.log 2>&1"
-        )
+        echo http-server failed, trying npm start...
+        start "Frontend Server" /min cmd /c "npm start > %LOG_DIR%\frontend.log 2>&1"
     )
+)
 ) else (
     echo Starting development server...
     start "Frontend Server" /min cmd /c "npm start > %LOG_DIR%\frontend.log 2>&1"

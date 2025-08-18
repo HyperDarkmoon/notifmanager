@@ -30,7 +30,15 @@ function Write-Log {
 function Test-Port {
     param([int]$Port)
     try {
+        # Use netstat to check if port is listening (more reliable than TcpClient)
+        $netstatResult = netstat -an | Select-String ":$Port " | Select-String "LISTENING"
+        if ($netstatResult) {
+            return $true
+        }
+        
+        # Fallback to TcpClient method
         $connection = New-Object System.Net.Sockets.TcpClient
+        $connection.ConnectTimeout = 1000
         $connection.Connect("localhost", $Port)
         $connection.Close()
         return $true
@@ -117,12 +125,16 @@ try {
         "C:\Program Files (x86)\xampp\xampp-control.exe"
     )
     
-    # Check if MySQL is already running
-    $mysqlRunning = Test-Port 3306
+    # Check if MySQL is already running (more thorough check)
+    Write-Log "Checking MySQL status on port 3306..."
+    $netstatCheck = netstat -an | Select-String ":3306 " | Select-String "LISTENING"
+    $mysqlRunning = $netstatCheck -ne $null
+    
     if ($mysqlRunning) {
         Write-Log "MySQL is already running on port 3306"
+        Write-Log "MySQL process details: $($netstatCheck | Out-String)"
     } else {
-        Write-Log "MySQL not detected, attempting to start..."
+        Write-Log "MySQL not detected on port 3306, attempting to start..."
         
         # Try to find and start XAMPP MySQL
         $xamppStarted = $false
@@ -272,63 +284,54 @@ try {
             Write-Log "Build directory found at: $FrontendDir\build"
             
             # Skip serve version check - it's causing issues
-            Write-Log "Starting production server with alternative methods..."
+            Write-Log "Starting production server with reliable methods..."
             
-            # Try multiple approaches without relying on serve package
+            # Method 1: Try a simple batch file approach to avoid Node.js execution issues
             try {
-                Write-Log "Attempting to use npm run serve if available..."
+                Write-Log "Creating temporary batch file for frontend serving..."
+                $tempBat = Join-Path $env:TEMP "start-frontend.bat"
+                $batContent = @"
+@echo off
+cd /d "$FrontendDir"
+echo Starting frontend server...
+echo Trying npx http-server first...
+npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent 2>nul
+if %errorlevel% neq 0 (
+    echo http-server failed, trying npm start...
+    npm start
+)
+"@
+                Set-Content -Path $tempBat -Value $batContent
                 
-                # Check if package.json has a serve script
-                $packageJsonPath = Join-Path $FrontendDir "package.json"
-                if (Test-Path $packageJsonPath) {
-                    $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                    if ($packageJson.scripts.serve) {
-                        Write-Log "Found serve script in package.json, using npm run serve..."
-                        $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "run", "serve" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                        $frontendStarted = $true
-                        Write-Log "npm run serve started with PID: $($frontendProcess.Id)"
-                    } else {
-                        throw "No serve script found in package.json"
-                    }
-                } else {
-                    throw "package.json not found"
-                }
+                $frontendProcess = Start-Process -FilePath $tempBat -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                $frontendStarted = $true
+                Write-Log "Batch file frontend server started with PID: $($frontendProcess.Id)"
                 
             } catch {
-                Write-Log "npm run serve failed: $($_.Exception.Message)" "Warning"
-                Write-Log "Trying simple Python HTTP server as fallback..."
+                Write-Log "Batch file approach failed: $($_.Exception.Message)" "Warning"
+                Write-Log "Trying direct cmd.exe approach..."
                 
                 try {
-                    # Use Python's built-in HTTP server as a reliable fallback
-                    Push-Location (Join-Path $FrontendDir "build")
-                    $frontendProcess = Start-Process -FilePath "python" -ArgumentList "-m", "http.server", "3000" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                    Pop-Location
+                    # Method 2: Try using cmd.exe directly
+                    $cmdArgs = "/c `"cd /d `"$FrontendDir`" && npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent`""
+                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                     $frontendStarted = $true
-                    Write-Log "Python HTTP server started with PID: $($frontendProcess.Id)"
+                    Write-Log "cmd.exe direct approach started with PID: $($frontendProcess.Id)"
                     
                 } catch {
-                    Write-Log "Python HTTP server failed: $($_.Exception.Message)" "Warning"
-                    Write-Log "Trying Node.js http-server as final fallback..."
+                    Write-Log "cmd.exe approach failed: $($_.Exception.Message)" "Warning"
+                    Write-Log "Final fallback: npm start..."
                     
-                    try {
-                        # Try to use Node.js http-server (which should be more reliable than serve)
-                        $frontendProcess = Start-Process -FilePath "npx" -ArgumentList "--yes", "http-server", "build", "-p", "3000", "-a", "0.0.0.0" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                        $frontendStarted = $true
-                        Write-Log "http-server started with PID: $($frontendProcess.Id)"
-                        
-                    } catch {
-                        Write-Log "http-server also failed: $($_.Exception.Message)" "Warning"
-                        Write-Log "All production methods failed, falling back to npm start..."
-                        
-                        $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
-                        $frontendStarted = $true
-                        Write-Log "Fallback npm start process started with PID: $($frontendProcess.Id)"
-                    }
+                    # Final fallback: npm start with cmd.exe
+                    $cmdArgs = "/c `"cd /d `"$FrontendDir`" && npm start`""
+                    $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+                    $frontendStarted = $true
+                    Write-Log "Final fallback npm start process started with PID: $($frontendProcess.Id)"
                 }
             }
             
             if ($frontendStarted) {
-                Start-Sleep -Seconds 5
+                Start-Sleep -Seconds 8
                 
                 # Check if process is still running
                 if (Get-Process -Id $frontendProcess.Id -ErrorAction SilentlyContinue) {

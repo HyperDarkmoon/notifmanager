@@ -21,8 +21,6 @@
     "build": "react-scripts build",
     "build:local": "copy .env.local .env && react-scripts build",
     "build:production": "copy .env.production .env && react-scripts build",
-    "serve": "npx --yes http-server build -p 3000 -a 0.0.0.0 --cors",
-    "serve:simple": "cd build && python -m http.server 3000",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
