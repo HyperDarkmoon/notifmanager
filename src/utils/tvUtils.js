@@ -202,14 +202,14 @@ export const renderInfoDisplay = (temperature, pressure, humidity, currentTime) 
         </div>
       </div>
       <div className="info-item">
-        <div className="info-icon">�</div>
+        <div className="info-icon">💧</div>
         <div className="info-data">
           <h3>Humidity</h3>
           <p className="info-value">{humidity}%</p>
         </div>
       </div>
       <div className="info-item">
-        <div className="info-icon">�</div>
+        <div className="info-icon">🕒</div>
         <div className="info-data">
           <h3>Current Time</h3>
           <p className="info-value">{currentTime.toLocaleTimeString()}</p>
