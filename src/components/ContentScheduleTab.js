@@ -81,6 +81,12 @@ const ContentScheduleTab = React.memo(() => {
         // Get the actual error message from the response
         const errorText = await response.text();
         console.log(`Upload error response: ${errorText}`);
+        
+        // Check for database packet size issues
+        if (errorText.includes('max_allowed_packet') || errorText.includes('Packet for query is too large')) {
+          throw new Error(`Database error: Video file is too large for database storage. Try using a smaller video file or contact your administrator to increase the database packet size limit.`);
+        }
+        
         throw new Error(`Upload failed (${response.status}): ${errorText}. Please ensure backend is restarted with updated WebSecurityConfig.java`);
       }
 
@@ -381,11 +387,17 @@ const ContentScheduleTab = React.memo(() => {
       } else {
         // Large video: upload to server and get URL
         try {
-          setSubmissionMessage(`Uploading large video: ${file.name}...`);
+          setSubmissionMessage(`Uploading video: ${file.name}...`);
           const uploadedUrl = await uploadLargeFile(file);
           videoUrls.push(uploadedUrl);
         } catch (error) {
-          setSubmissionMessage(`Error uploading ${file.name}: ${error.message}`);
+          console.error(`Upload failed for ${file.name}:`, error);
+          // Provide specific error message for database packet size issues
+          if (error.message.includes('max_allowed_packet') || error.message.includes('Packet for query is too large')) {
+            setSubmissionMessage(`Error: Video file ${file.name} is too large for the database. Please use a smaller video file or contact your administrator to increase the database packet size limit.`);
+          } else {
+            setSubmissionMessage(`Error uploading ${file.name}: ${error.message}`);
+          }
           return;
         }
       }
