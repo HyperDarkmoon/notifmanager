@@ -10,9 +10,24 @@ REM Set directories
 set FRONTEND_DIR=E:\notifmanager
 set BACKEND_DIR=E:\notificationbackend
 set LOG_DIR=%FRONTEND_DIR%\logs
+set MAX_LOG_SIZE=52428800
+set MAX_LOG_DAYS=30
 
 REM Create log directory if it doesn't exist
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+
+REM Create archive directory if it doesn't exist
+if not exist "%LOG_DIR%\archive" mkdir "%LOG_DIR%\archive"
+
+REM Function to rotate log file if it's too large
+REM Parameters: %1 = log file path
+call :rotate_log_if_needed "%LOG_DIR%\backend.log"
+call :rotate_log_if_needed "%LOG_DIR%\frontend.log"
+call :rotate_log_if_needed "%LOG_DIR%\backend-error.log"
+call :rotate_log_if_needed "%LOG_DIR%\frontend-error.log"
+
+REM Clean up old archived logs (older than MAX_LOG_DAYS)
+forfiles /p "%LOG_DIR%\archive" /s /m *.log /d -%MAX_LOG_DAYS% /c "cmd /c del @path" 2>nul
 
 REM Function to check if a port is in use
 REM We'll use netstat to check ports
@@ -174,3 +189,42 @@ if "%1" neq "auto" (
     echo Press any key to exit...
     pause >nul
 )
+
+goto :eof
+
+REM Function to rotate log file if it exceeds MAX_LOG_SIZE
+:rotate_log_if_needed
+set "logfile=%~1"
+if not exist "%logfile%" goto :eof
+
+REM Get file size in bytes
+for %%A in ("%logfile%") do set filesize=%%~zA
+
+REM Check if file size exceeds MAX_LOG_SIZE (50MB)
+if %filesize% gtr %MAX_LOG_SIZE% (
+    echo Rotating log file: %logfile% ^(size: %filesize% bytes^)
+    
+    REM Create timestamp for archive filename
+    for /f "tokens=1-4 delims=/ " %%a in ('date /t') do (
+        for /f "tokens=1-2 delims=: " %%e in ('time /t') do (
+            set timestamp=%%c%%a%%b_%%e%%f
+        )
+    )
+    
+    REM Remove any spaces from timestamp
+    set timestamp=%timestamp: =%
+    
+    REM Get just the filename without path for archive
+    for %%F in ("%logfile%") do set filename=%%~nxF
+    
+    REM Move current log to archive with timestamp
+    set "archivefile=%LOG_DIR%\archive\%timestamp%_%filename%"
+    move "%logfile%" "%archivefile%" >nul 2>&1
+    
+    if exist "%archivefile%" (
+        echo Log archived to: %archivefile%
+    ) else (
+        echo Warning: Failed to archive log file
+    )
+)
+goto :eof

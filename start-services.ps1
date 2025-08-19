@@ -10,10 +10,18 @@ param(
 $FrontendDir = "E:\notifmanager"
 $BackendDir = "E:\notificationbackend"
 $LogDir = "$FrontendDir\logs"
+$MaxLogSize = 50MB  # 50 megabytes
+$MaxLogDays = 30    # Keep logs for 30 days
 
 # Ensure log directory exists
 if (!(Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+}
+
+# Ensure archive directory exists
+$ArchiveDir = "$LogDir\archive"
+if (!(Test-Path $ArchiveDir)) {
+    New-Item -ItemType Directory -Path $ArchiveDir -Force | Out-Null
 }
 
 # Logging function
@@ -24,6 +32,44 @@ function Write-Log {
     
     Write-Host $logMessage
     Add-Content -Path "$LogDir\startup.log" -Value $logMessage
+}
+
+# Function to rotate log files if they exceed size limit
+function Invoke-LogRotation {
+    param([string]$LogFilePath)
+    
+    if (Test-Path $LogFilePath) {
+        $fileInfo = Get-Item $LogFilePath
+        if ($fileInfo.Length -gt $MaxLogSize) {
+            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+            $filename = $fileInfo.Name
+            $archiveFile = Join-Path $ArchiveDir "$timestamp`_$filename"
+            
+            Write-Log "Rotating log file: $LogFilePath (size: $($fileInfo.Length) bytes)"
+            try {
+                Move-Item $LogFilePath $archiveFile -Force
+                Write-Log "Log archived to: $archiveFile"
+            } catch {
+                Write-Log "Warning: Failed to archive log file: $($_.Exception.Message)" "Warning"
+            }
+        }
+    }
+}
+
+# Function to clean up old archived logs
+function Remove-OldLogs {
+    $cutoffDate = (Get-Date).AddDays(-$MaxLogDays)
+    $oldLogs = Get-ChildItem -Path $ArchiveDir -Filter "*.log" -ErrorAction SilentlyContinue | 
+               Where-Object { $_.CreationTime -lt $cutoffDate }
+    
+    foreach ($oldLog in $oldLogs) {
+        try {
+            Remove-Item $oldLog.FullName -Force
+            Write-Log "Removed old log: $($oldLog.Name)"
+        } catch {
+            Write-Log "Warning: Failed to remove old log $($oldLog.Name): $($_.Exception.Message)" "Warning"
+        }
+    }
 }
 
 # Function to check if port is in use
@@ -97,6 +143,18 @@ function Wait-ForService {
 try {
     Write-Log "Starting Notification Manager System" "Info"
     
+    # Rotate logs if they're too large
+    Write-Log "Checking and rotating large log files..."
+    Invoke-LogRotation "$LogDir\backend.log"
+    Invoke-LogRotation "$LogDir\frontend.log"
+    Invoke-LogRotation "$LogDir\backend-error.log"
+    Invoke-LogRotation "$LogDir\frontend-error.log"
+    Invoke-LogRotation "$LogDir\startup.log"
+    
+    # Clean up old archived logs
+    Write-Log "Cleaning up old archived logs..."
+    Remove-OldLogs
+    
     # Clean up existing processes
     Write-Log "Cleaning up existing processes..."
     Stop-ProcessOnPort 8090  # Backend
@@ -128,7 +186,7 @@ try {
     # Check if MySQL is already running (more thorough check)
     Write-Log "Checking MySQL status on port 3306..."
     $netstatCheck = netstat -an | Select-String ":3306 " | Select-String "LISTENING"
-    $mysqlRunning = $netstatCheck -ne $null
+    $mysqlRunning = $null -ne $netstatCheck
     
     if ($mysqlRunning) {
         Write-Log "MySQL is already running on port 3306"
