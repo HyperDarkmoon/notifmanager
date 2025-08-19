@@ -5,23 +5,7 @@ import { API_ENDPOINTS } from "../config/apiConfig";
 // Shared constants
 export const ROTATION_PERIOD = 5000; // 5 seconds per content type
 export const CONTENT_FETCH_INTERVAL = 5000; // Check every 5 seconds
-export const RANDOM_TEXT_INTERVAL = 30000; // New text every 30 seconds
 export const TIME_UPDATE_INTERVAL = 1000; // Update every second
-
-// Shared random texts
-export const getRandomText = () => {
-  const texts = [
-    "Welcome to our company! We're glad you're here.",
-    "Did you know? Taking regular breaks increases productivity.",
-    "Today's focus: Quality and customer satisfaction.",
-    "Remember to hydrate throughout the day!",
-    "Our quarterly goals are on track - great teamwork everyone!",
-    "Innovation is the key to our success.",
-    "Safety first! Remember our workplace guidelines.",
-    "Thank you for your continued dedication to excellence.",
-  ];
-  return texts[Math.floor(Math.random() * texts.length)];
-};
 
 // Shared content fetching logic
 export const fetchCustomContent = async (
@@ -215,15 +199,6 @@ export const renderInfoDisplay = (temperature, pressure, humidity, currentTime) 
           <p className="info-value">{currentTime.toLocaleTimeString()}</p>
         </div>
       </div>
-    </div>
-  </div>
-);
-
-export const renderMessageDisplay = (randomText) => (
-  <div className="tv-message-display">
-    <div className="message-content">
-      <div className="message-icon">📢</div>
-      <div className="message-text">{randomText}</div>
     </div>
   </div>
 );
@@ -501,18 +476,15 @@ export const renderContentIndicators = (contentIndex, customContent) => {
     );
   }
 
-  // Regular mode: 2 or 3 indicators
+  // Regular mode: 1 or 2 indicators (message slide removed)
   return (
     <div className="content-indicator">
       <div
         className={`indicator-dot ${contentIndex === 0 ? "active" : ""}`}
       ></div>
-      <div
-        className={`indicator-dot ${contentIndex === 1 ? "active" : ""}`}
-      ></div>
       {customContent && (
         <div
-          className={`indicator-dot ${contentIndex === 2 ? "active" : ""}`}
+          className={`indicator-dot ${contentIndex === 1 ? "active" : ""}`}
         ></div>
       )}
     </div>

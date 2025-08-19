@@ -276,38 +276,6 @@ body.sidebar-closed .tv-page {
   font-weight: 700;
 }
 
-/* Message Display */
-.tv-message-display {
-  padding: 2rem; /* Remove bottom padding for indicator */
-  height: 100%;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  max-height: 100%;
-  overflow: hidden;
-}
-
-.message-content {
-  text-align: center;
-  max-width: 90%;
-  margin: 0 auto;
-}
-
-.message-icon {
-  font-size: 6rem;
-  margin-bottom: 3rem;
-  color: #667eea;
-}
-
-.message-text {
-  font-size: min(4rem, 5vw);
-  line-height: 1.4;
-  font-weight: 300;
-  color: #2d3748;
-}
-
 /* Custom Content Display */
 .tv-custom-display {
   padding: 0; /* Remove bottom padding for indicator */
@@ -541,19 +509,6 @@ body.sidebar-closed .tv-page {
     left: 0;
     width: 100%;
     height: calc(100vh - var(--navbar-height)); /* Use variable */
-  }
-
-  .tv-message-display {
-    padding: 1rem; /* Remove indicator space from mobile too */
-  }
-
-  .message-icon {
-    font-size: 4rem;
-    margin-bottom: 2rem;
-  }
-
-  .message-text {
-    font-size: min(3rem, 6vw);
   }
 
   .info-grid {

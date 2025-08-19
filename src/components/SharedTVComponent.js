@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTVLogic } from "../utils/useTVLogic";
 import {
   renderInfoDisplay,
-  renderMessageDisplay,
   renderCustomDisplay,
   renderProfileSlide,
   renderContentIndicators,
@@ -17,7 +16,6 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
     temperature,
     pressure,
     humidity,
-    randomText,
     customContent,
     currentTime,
     isVideoPlaying,
@@ -89,17 +87,15 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
       return renderInfoDisplay(temperature, pressure, humidity, currentTime);
     }
 
-    // Regular mode: use original 3-slide system
-    // If we don't have custom content and index would be 2, show index 0 instead
+    // Regular mode: use modified 2-slide system (removed message display)
+    // If we don't have custom content and index would be 1, show index 0 instead
     const effectiveIndex =
-      !customContent && contentIndex === 2 ? 0 : contentIndex;
+      !customContent && contentIndex === 1 ? 0 : contentIndex;
 
     switch (effectiveIndex) {
       case 0:
         return renderInfoDisplay(temperature, pressure, humidity, currentTime);
       case 1:
-        return renderMessageDisplay(randomText);
-      case 2:
         return renderCustomDisplay(
           customContent,
           imageSetIndex,

@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getRandomText,
   fetchCustomContent,
   ROTATION_PERIOD,
   CONTENT_FETCH_INTERVAL,
-  RANDOM_TEXT_INTERVAL,
   TIME_UPDATE_INTERVAL,
 } from "./tvUtils";
 import { getImageSetsFromUrls, getVideoSetsFromUrls } from "./contentScheduleUtils";
@@ -17,7 +15,6 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [temperature, setTemperature] = useState(initialTemperature);
   const [pressure, setPressure] = useState(initialPressure);
   const [humidity, setHumidity] = useState(50.0); // Initial humidity value
-  const [randomText, setRandomText] = useState("");
   const [customContent, setCustomContent] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -130,7 +127,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     }
 
     // Only setup image set rotation if we're on custom content and it has multiple image sets
-    if (customContent && contentIndex === 2 && customContent.imageUrls) {
+    if (customContent && contentIndex === 1 && customContent.imageUrls) {
       const imageSets = getImageSetsFromUrls(customContent.imageUrls, customContent.contentType);
       
       console.log(`${tvId} - Image sets for ${customContent.contentType}:`, imageSets.length, 'sets');
@@ -168,7 +165,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
 
     // Only setup video set rotation if we're on custom content and it has multiple videos
     // AND we're not currently in the middle of playing videos
-    if (customContent && contentIndex === 2 && customContent.videoUrls && customContent.contentType === "VIDEO" && !isVideoPlayingRef.current) {
+    if (customContent && contentIndex === 1 && customContent.videoUrls && customContent.contentType === "VIDEO" && !isVideoPlayingRef.current) {
       const videoSets = getVideoSetsFromUrls(customContent.videoUrls);
       
       console.log(`${tvId} - Video sets for VIDEO content:`, videoSets.length, 'videos');
@@ -191,16 +188,6 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     };
   }, [customContent, contentIndex, tvId]);
 
-  // Set new random text periodically
-  useEffect(() => {
-    setRandomText(getRandomText());
-    const interval = setInterval(() => {
-      setRandomText(getRandomText());
-    }, RANDOM_TEXT_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Content rotation logic
   useEffect(() => {
     // Determine content count based on whether we have a profile or regular content
@@ -213,12 +200,12 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       isProfile = true;
       console.log(`${tvId} - Profile mode: ${contentCount} slides from profile "${customContent.title}"`);
     } else if (customContent) {
-      // Regular custom content mode: info + message + custom content
-      contentCount = 3;
+      // Regular custom content mode: info + custom content (message slide removed)
+      contentCount = 2;
       console.log(`${tvId} - Regular mode with custom content: ${contentCount} slides`);
     } else {
-      // Default mode: info + message only
-      contentCount = 2;
+      // Default mode: info only (message slide removed)
+      contentCount = 1;
       console.log(`${tvId} - Default mode: ${contentCount} slides`);
     }
 
@@ -252,7 +239,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
               return nextIndex;
             } else {
               // Regular mode: handle image set rotation for custom content
-              if (prevIndex === 2 && customContent && customContent.imageUrls) {
+              if (prevIndex === 1 && customContent && customContent.imageUrls) {
                 const imageSets = getImageSetsFromUrls(customContent.imageUrls, customContent.contentType);
                 
                 if (imageSets.length > 1) {
@@ -362,9 +349,9 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
             if (customContent && customContent.type === "profile" && customContent.slides) {
               contentCount = customContent.slides.length;
             } else if (customContent) {
-              contentCount = 3;
-            } else {
               contentCount = 2;
+            } else {
+              contentCount = 1;
             }
             
             rotationIntervalRef.current = setInterval(() => {
@@ -393,9 +380,9 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       if (customContent && customContent.type === "profile" && customContent.slides) {
         contentCount = customContent.slides.length;
       } else if (customContent) {
-        contentCount = 3;
-      } else {
         contentCount = 2;
+      } else {
+        contentCount = 1;
       }
       
       // Force a rotation to the next slide
@@ -433,7 +420,6 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     temperature,
     pressure,
     humidity,
-    randomText,
     customContent,
     currentTime,
     isVideoPlaying,

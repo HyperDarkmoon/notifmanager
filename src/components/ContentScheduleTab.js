@@ -117,15 +117,6 @@ const ContentScheduleTab = React.memo(() => {
     }
   }, []);
 
-  // Handle TV selection - memoized
-  const handleTVSelection = useCallback((tvValue) => {
-    setFormData((prev) => ({
-      ...prev,
-      targetTVs: prev.targetTVs.includes(tvValue)
-        ? prev.targetTVs.filter((tv) => tv !== tvValue)
-        : [...prev.targetTVs, tvValue],
-    }));
-  }, []);
 
   // Handle setting current time for schedule - memoized
   const handleSetCurrentTime = useCallback(() => {
