@@ -108,7 +108,11 @@ cd /d "%FRONTEND_DIR%"
 REM Check if node_modules exists
 if not exist "node_modules" (
     echo Installing dependencies...
-    npm install
+    REM Set environment variables to prevent hanging on updates
+    set NPM_CONFIG_UPDATE_NOTIFIER=false
+    set NPM_CONFIG_FUND=false
+    set NPM_CONFIG_AUDIT=false
+    npm install --no-update-notifier --no-fund --no-audit --silent
 )
 
 REM Skip serve package installation to avoid hanging
@@ -116,20 +120,35 @@ REM Skip serve package installation to avoid hanging
 REM Check if build directory exists for production
 if exist "build" (
     echo Starting production server...
-    echo Trying http-server...
-    start "Frontend Server" /min cmd /c "npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent > %LOG_DIR%\frontend.log 2>&1"
-    timeout /t 3 /nobreak >nul
     
-    REM Check if the above worked, if not try npm start
+    REM Set environment variables to prevent npm update prompts
+    set NPM_CONFIG_UPDATE_NOTIFIER=false
+    set NPM_CONFIG_FUND=false
+    set NPM_CONFIG_AUDIT=false
+    
+    REM Use npm serve script (most reliable)
+    echo Using npm serve script...
+    start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && set NPM_CONFIG_FUND=false && npm run serve:silent > %LOG_DIR%\frontend.log 2>&1"
+    
+    timeout /t 5 /nobreak >nul
+    
+    REM Check if serve worked, if not try npx serve as fallback
     netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul
     if %errorlevel% neq 0 (
-        echo http-server failed, trying npm start...
-        start "Frontend Server" /min cmd /c "npm start > %LOG_DIR%\frontend.log 2>&1"
+        echo npm serve failed, trying npx serve...
+        start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && npx --yes --silent serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
+        timeout /t 3 /nobreak >nul
+        
+        REM Final fallback to npm start
+        netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul
+        if %errorlevel% neq 0 (
+            echo serve failed, trying npm start...
+            start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && set NPM_CONFIG_FUND=false && npm start --silent > %LOG_DIR%\frontend.log 2>&1"
+        )
     )
-)
 ) else (
     echo Starting development server...
-    start "Frontend Server" /min cmd /c "npm start > %LOG_DIR%\frontend.log 2>&1"
+    start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && set NPM_CONFIG_FUND=false && npm start --silent > %LOG_DIR%\frontend.log 2>&1"
 )
 
 echo Waiting for frontend to start...

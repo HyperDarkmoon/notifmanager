@@ -11,6 +11,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3",
     "react-scripts": "5.0.1",
+    "serve": "^14.2.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -21,6 +22,11 @@
     "build": "react-scripts build",
     "build:local": "copy .env.local .env && react-scripts build",
     "build:production": "copy .env.production .env && react-scripts build",
+    "serve": "serve -s build -l 3000",
+    "serve:network": "serve -s build -l 3000 -L",
+    "serve:silent": "serve -s build -l 3000 --silent",
+    "prestart": "npm config set update-notifier false && npm config set fund false",
+    "prebuild": "npm config set update-notifier false && npm config set fund false",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

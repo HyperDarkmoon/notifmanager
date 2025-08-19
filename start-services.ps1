@@ -270,7 +270,11 @@ try {
         # Check if node_modules exists
         if (!(Test-Path "node_modules")) {
             Write-Log "Installing frontend dependencies..."
-            Start-Process -FilePath "npm" -ArgumentList "install" -Wait -WindowStyle Hidden
+            # Set environment variables to prevent hanging on updates
+            $env:NPM_CONFIG_UPDATE_NOTIFIER = "false"
+            $env:NPM_CONFIG_FUND = "false"
+            $env:NPM_CONFIG_AUDIT = "false"
+            Start-Process -FilePath "npm" -ArgumentList "install", "--no-update-notifier", "--no-fund", "--no-audit", "--silent" -Wait -WindowStyle Hidden
         }
         
         # Skip serve package installation - use alternative methods instead
@@ -292,13 +296,20 @@ try {
                 $tempBat = Join-Path $env:TEMP "start-frontend.bat"
                 $batContent = @"
 @echo off
+set NPM_CONFIG_UPDATE_NOTIFIER=false
+set NPM_CONFIG_FUND=false
+set NPM_CONFIG_AUDIT=false
 cd /d "$FrontendDir"
 echo Starting frontend server...
-echo Trying npx http-server first...
-npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent 2>nul
+echo Trying npm serve first...
+npm run serve:silent 2>nul
 if %errorlevel% neq 0 (
-    echo http-server failed, trying npm start...
-    npm start
+    echo npm serve failed, trying npx serve...
+    npx --yes --silent serve -s build -l 3000 2>nul
+    if %errorlevel% neq 0 (
+        echo serve failed, trying npm start...
+        npm start --silent
+    )
 )
 "@
                 Set-Content -Path $tempBat -Value $batContent
@@ -312,8 +323,11 @@ if %errorlevel% neq 0 (
                 Write-Log "Trying direct cmd.exe approach..."
                 
                 try {
-                    # Method 2: Try using cmd.exe directly
-                    $cmdArgs = "/c `"cd /d `"$FrontendDir`" && npx --yes http-server build -p 3000 -a 0.0.0.0 --cors --silent`""
+                    # Method 2: Try using cmd.exe directly with anti-hang settings
+                    $env:NPM_CONFIG_UPDATE_NOTIFIER = "false"
+                    $env:NPM_CONFIG_FUND = "false"
+                    $env:NPM_CONFIG_AUDIT = "false"
+                    $cmdArgs = "/c `"set NPM_CONFIG_UPDATE_NOTIFIER=false && set NPM_CONFIG_FUND=false && cd /d `"$FrontendDir`" && npm run serve:silent`""
                     $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                     $frontendStarted = $true
                     Write-Log "cmd.exe direct approach started with PID: $($frontendProcess.Id)"
@@ -322,8 +336,11 @@ if %errorlevel% neq 0 (
                     Write-Log "cmd.exe approach failed: $($_.Exception.Message)" "Warning"
                     Write-Log "Final fallback: npm start..."
                     
-                    # Final fallback: npm start with cmd.exe
-                    $cmdArgs = "/c `"cd /d `"$FrontendDir`" && npm start`""
+                    # Final fallback: npm start with cmd.exe and anti-hang settings
+                    $env:NPM_CONFIG_UPDATE_NOTIFIER = "false"
+                    $env:NPM_CONFIG_FUND = "false"
+                    $env:NPM_CONFIG_AUDIT = "false"
+                    $cmdArgs = "/c `"set NPM_CONFIG_UPDATE_NOTIFIER=false && set NPM_CONFIG_FUND=false && cd /d `"$FrontendDir`" && npm start --silent`""
                     $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
                     $frontendStarted = $true
                     Write-Log "Final fallback npm start process started with PID: $($frontendProcess.Id)"
@@ -354,7 +371,11 @@ if %errorlevel% neq 0 (
                 Write-Log "package.json NOT found!" "Error"
             }
             
-            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
+            # Set environment variables to prevent hanging on updates
+            $env:NPM_CONFIG_UPDATE_NOTIFIER = "false"
+            $env:NPM_CONFIG_FUND = "false"
+            $env:NPM_CONFIG_AUDIT = "false"
+            $frontendProcess = Start-Process -FilePath "npm" -ArgumentList "start", "--silent" -WindowStyle Hidden -PassThru -RedirectStandardOutput "$LogDir\frontend.log" -RedirectStandardError "$LogDir\frontend-error.log"
             $frontendStarted = $true
             Write-Log "Development server process started with PID: $($frontendProcess.Id)"
         }
