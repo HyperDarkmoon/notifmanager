@@ -136,7 +136,7 @@ if exist "build" (
     netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul
     if %errorlevel% neq 0 (
         echo npm serve failed, trying npx serve...
-        start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && npx --yes --silent serve -s build -l 3000 > %LOG_DIR%\frontend.log 2>&1"
+        start "Frontend Server" /min cmd /c "set NPM_CONFIG_UPDATE_NOTIFIER=false && npx --yes --silent serve -s build -l 3000 -L > %LOG_DIR%\frontend.log 2>&1"
         timeout /t 3 /nobreak >nul
         
         REM Final fallback to npm start
