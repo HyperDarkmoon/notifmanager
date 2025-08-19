@@ -8,6 +8,7 @@ import {
   TIME_UPDATE_INTERVAL,
 } from "./tvUtils";
 import { getImageSetsFromUrls, getVideoSetsFromUrls } from "./contentScheduleUtils";
+import dataFetcher from "./smartTVDataFetcher";
 
 export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [contentIndex, setContentIndex] = useState(0);
@@ -56,37 +57,52 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Device data fetching (every 20 seconds)
+  // Device data fetching with smart TV compatibility (using standard timers)
   useEffect(() => {
-    const fetchDeviceData = async () => {
-      try {
-        const response = await fetch("http://localhost:8090/api/device-data");
-        const result = await response.json();
+    // Set up data listener for this TV
+    const handleDataUpdate = (type, data) => {
+      if (type === 'deviceData' && data && data.success) {
+        console.log(`${tvId} - Received device data update:`, data);
         
-        if (result.success) {
-          if (result.temperature !== undefined) {
-            setTemperature(parseFloat(result.temperature));
-          }
-          if (result.pressure !== undefined) {
-            setPressure(parseFloat(result.pressure));
-          }
-          if (result.humidity !== undefined) {
-            setHumidity(parseFloat(result.humidity));
+        if (data.temperature !== undefined) {
+          const temp = parseFloat(data.temperature);
+          if (!isNaN(temp)) {
+            setTemperature(temp);
           }
         }
-      } catch (error) {
-        console.error(`${tvId} - Error fetching device data:`, error);
-        // Keep using current values on error
+        if (data.pressure !== undefined) {
+          const press = parseFloat(data.pressure);
+          if (!isNaN(press)) {
+            setPressure(press);
+          }
+        }
+        if (data.humidity !== undefined) {
+          const humid = parseFloat(data.humidity);
+          if (!isNaN(humid)) {
+            setHumidity(humid);
+          }
+        }
       }
     };
 
-    // Fetch immediately
-    fetchDeviceData();
-    
-    // Set up interval to fetch every 20 seconds (same as DeviceData component)
-    const interval = setInterval(fetchDeviceData, 20000);
+    // Add listener to the data fetcher
+    dataFetcher.addListener(handleDataUpdate);
 
-    return () => clearInterval(interval);
+    // Start polling if not already started (using longer intervals for smart TV compatibility)
+    if (!dataFetcher.isPolling) {
+      dataFetcher.startPolling(30000); // 30 seconds - longer for smart TV stability
+    }
+
+    // Try to get cached data immediately
+    const cachedData = dataFetcher.getCachedData('deviceData');
+    if (cachedData) {
+      handleDataUpdate('deviceData', cachedData);
+    }
+
+    return () => {
+      // Remove listener when component unmounts
+      dataFetcher.removeListener(handleDataUpdate);
+    };
   }, [tvId]);
 
   // Fetch custom content for this TV

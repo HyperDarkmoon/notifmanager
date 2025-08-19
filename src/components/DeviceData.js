@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import dataFetcher from "../utils/smartTVDataFetcher";
+import { getApiBaseUrl } from "../config/apiConfig";
 
 function DeviceData() {
   const [data, setData] = useState({});
@@ -28,8 +30,9 @@ function DeviceData() {
   const fetchData = async () => {
     try {
       setError(null);
-      const response = await fetch("http://localhost:8090/api/device-data");
-      const result = await response.json();
+      setIsLoading(true);
+      
+      const result = await dataFetcher.fetchDeviceData();
       
       console.log('Fetched device data:', result);
       setData(result);
@@ -47,22 +50,44 @@ function DeviceData() {
     fetchData();
   }, []);
 
-  // Auto-refresh every 20 seconds (slightly longer than backend's 15s schedule)
+  // Auto-refresh using smart TV data fetcher with longer intervals
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const interval = setInterval(() => {
-      fetchData();
-    }, 20000); // 20 seconds
+    // Set up data listener
+    const handleDataUpdate = (type, data) => {
+      if (type === 'deviceData') {
+        console.log('DeviceData component received update:', data);
+        setData(data);
+        setLastUpdate(new Date().toLocaleTimeString());
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearInterval(interval);
+    // Add listener
+    dataFetcher.addListener(handleDataUpdate);
+
+    // Start polling if not already started (longer interval for smart TV stability)
+    if (!dataFetcher.isPolling) {
+      dataFetcher.startPolling(30000); // 30 seconds - longer for smart TV
+    }
+
+    // Get cached data immediately if available
+    const cachedData = dataFetcher.getCachedData('deviceData');
+    if (cachedData) {
+      handleDataUpdate('deviceData', cachedData);
+    }
+
+    return () => {
+      dataFetcher.removeListener(handleDataUpdate);
+    };
   }, [autoRefresh]);
 
   const handleManualRefresh = async () => {
     setIsLoading(true);
     try {
       // Trigger backend refresh first
-      await fetch("http://localhost:8090/api/device-data/refresh", {
+      await dataFetcher.safeFetch(`${getApiBaseUrl()}/api/device-data/refresh`, {
         method: 'POST'
       });
       // Then fetch fresh data
@@ -215,14 +240,14 @@ function DeviceData() {
 
           {/* Main Sensor Data Display */}
           {(data.temperature || data.pressure || data.humidity) && (
-            <div style={{ marginBottom: '30px' }}>
+            <div style={{ marginBottom: '30px' }} className="fade-in">
               <h3>🌡️ Current Sensor Readings</h3>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
                 gap: '15px',
                 marginBottom: '20px'
-              }}>
+              }} className="grid-container grid-fallback">
                 {data.temperature && (
                   <div style={{ 
                     padding: '15px', 

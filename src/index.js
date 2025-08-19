@@ -1,3 +1,6 @@
+// Import polyfills first for smart TV compatibility
+import './polyfills';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
