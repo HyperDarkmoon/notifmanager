@@ -11,6 +11,7 @@ function DynamicTVPage() {
   
   return (
     <SharedTVComponent 
+      key={tvName}
       tvId={tvName} 
       initialTemperature={initialTemperature} 
       initialPressure={initialPressure} 

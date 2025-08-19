@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
   getRandomText,
-  simulateEnvironmentalData,
   fetchCustomContent,
   ROTATION_PERIOD,
   CONTENT_FETCH_INTERVAL,
@@ -16,6 +15,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   const [videoSetIndex, setVideoSetIndex] = useState(0);
   const [temperature, setTemperature] = useState(initialTemperature);
   const [pressure, setPressure] = useState(initialPressure);
+  const [humidity, setHumidity] = useState(50.0); // Initial humidity value
   const [randomText, setRandomText] = useState("");
   const [customContent, setCustomContent] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -39,18 +39,55 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     videoSetIndexRef.current = videoSetIndex;
   }, [videoSetIndex]);
 
-  // Environmental data simulation and time updates
+  // Initialize TV state when component mounts
+  useEffect(() => {
+    console.log(`${tvId} - Initializing TV with content index 0`);
+    setContentIndex(0);
+    setImageSetIndex(0);
+    setVideoSetIndex(0);
+  }, [tvId]);
+
+  // Real-time time updates (every second)
   useEffect(() => {
     const interval = setInterval(() => {
-      const { temperature: newTemp, pressure: newPressure } =
-        simulateEnvironmentalData(temperature, pressure);
-      setTemperature(newTemp);
-      setPressure(newPressure);
       setCurrentTime(new Date());
     }, TIME_UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [temperature, pressure]);
+  }, []);
+
+  // Device data fetching (every 20 seconds)
+  useEffect(() => {
+    const fetchDeviceData = async () => {
+      try {
+        const response = await fetch("http://localhost:8090/api/device-data");
+        const result = await response.json();
+        
+        if (result.success) {
+          if (result.temperature !== undefined) {
+            setTemperature(parseFloat(result.temperature));
+          }
+          if (result.pressure !== undefined) {
+            setPressure(parseFloat(result.pressure));
+          }
+          if (result.humidity !== undefined) {
+            setHumidity(parseFloat(result.humidity));
+          }
+        }
+      } catch (error) {
+        console.error(`${tvId} - Error fetching device data:`, error);
+        // Keep using current values on error
+      }
+    };
+
+    // Fetch immediately
+    fetchDeviceData();
+    
+    // Set up interval to fetch every 20 seconds (same as DeviceData component)
+    const interval = setInterval(fetchDeviceData, 20000);
+
+    return () => clearInterval(interval);
+  }, [tvId]);
 
   // Fetch custom content for this TV
   useEffect(() => {
@@ -379,6 +416,7 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     videoSetIndex,
     temperature,
     pressure,
+    humidity,
     randomText,
     customContent,
     currentTime,

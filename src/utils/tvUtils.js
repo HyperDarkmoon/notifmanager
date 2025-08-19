@@ -23,17 +23,6 @@ export const getRandomText = () => {
   return texts[Math.floor(Math.random() * texts.length)];
 };
 
-// Shared temperature and pressure simulation
-export const simulateEnvironmentalData = (prevTemp, prevPressure) => {
-  const newTemp = prevTemp + (Math.random() * 2 - 1);
-  const newPressure = prevPressure + (Math.random() * 5 - 2.5);
-
-  return {
-    temperature: parseFloat(newTemp.toFixed(1)),
-    pressure: parseFloat(newPressure.toFixed(2)),
-  };
-};
-
 // Shared content fetching logic
 export const fetchCustomContent = async (
   tvId,
@@ -194,7 +183,7 @@ export const fetchCustomContent = async (
 };
 
 // Shared content rendering components
-export const renderInfoDisplay = (temperature, pressure, currentTime) => (
+export const renderInfoDisplay = (temperature, pressure, humidity, currentTime) => (
   <div className="tv-info-display">
     <h2>Current Conditions</h2>
     <div className="info-grid">
@@ -213,17 +202,17 @@ export const renderInfoDisplay = (temperature, pressure, currentTime) => (
         </div>
       </div>
       <div className="info-item">
-        <div className="info-icon">🕒</div>
+        <div className="info-icon">�</div>
         <div className="info-data">
-          <h3>Current Time</h3>
-          <p className="info-value">{currentTime.toLocaleTimeString()}</p>
+          <h3>Humidity</h3>
+          <p className="info-value">{humidity}%</p>
         </div>
       </div>
       <div className="info-item">
-        <div className="info-icon">📅</div>
+        <div className="info-icon">�</div>
         <div className="info-data">
-          <h3>Date</h3>
-          <p className="info-value">{currentTime.toLocaleDateString()}</p>
+          <h3>Current Time</h3>
+          <p className="info-value">{currentTime.toLocaleTimeString()}</p>
         </div>
       </div>
     </div>

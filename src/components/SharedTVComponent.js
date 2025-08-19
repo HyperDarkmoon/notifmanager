@@ -16,6 +16,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
     videoSetIndex,
     temperature,
     pressure,
+    humidity,
     randomText,
     customContent,
     currentTime,
@@ -85,7 +86,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
         );
       }
       // Fallback if slide doesn't exist
-      return renderInfoDisplay(temperature, pressure, currentTime);
+      return renderInfoDisplay(temperature, pressure, humidity, currentTime);
     }
 
     // Regular mode: use original 3-slide system
@@ -95,7 +96,7 @@ const SharedTVComponent = ({ tvId, initialTemperature, initialPressure }) => {
 
     switch (effectiveIndex) {
       case 0:
-        return renderInfoDisplay(temperature, pressure, currentTime);
+        return renderInfoDisplay(temperature, pressure, humidity, currentTime);
       case 1:
         return renderMessageDisplay(randomText);
       case 2:
