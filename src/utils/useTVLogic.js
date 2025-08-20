@@ -119,6 +119,9 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     setVideoSetIndex(0);
     // Reset content index to 0 when content changes to ensure profiles start from first slide
     setContentIndex(0);
+    // Reset video playing state when content changes
+    setIsVideoPlaying(false);
+    isVideoPlayingRef.current = false;
   }, [customContent]);
 
   // Image set rotation for custom content (separate from main content rotation)
