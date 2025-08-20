@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -27,23 +27,61 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarPage, setSidebarPage] = useState(1);
   const [welcomePage, setWelcomePage] = useState(1);
+  const [selectedSidebarIndex, setSelectedSidebarIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const { tvs, isLoading: isLoadingTVs } = useTVData();
 
+  // Natural sort function to handle TV1, TV2, ..., TV10 correctly
+  const naturalSort = (a, b) => {
+    const extractNumber = (str) => {
+      const match = str.match(/(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    
+    const aNum = extractNumber(a.value);
+    const bNum = extractNumber(b.value);
+    
+    if (aNum !== bNum) {
+      return aNum - bNum;
+    }
+    
+    // If numbers are the same or no numbers found, use alphabetical sort
+    return a.value.localeCompare(b.value);
+  };
+
+  // Filter and sort TVs
+  const filteredAndSortedTVs = React.useMemo(() => {
+    let filtered = tvs;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = tvs.filter(tv => 
+        tv.label.toLowerCase().includes(query) ||
+        tv.value.toLowerCase().includes(query) ||
+        (tv.location && tv.location.toLowerCase().includes(query))
+      );
+    }
+    
+    // Sort naturally
+    return filtered.sort(naturalSort);
+  }, [tvs, searchQuery]);
+
   // Pagination settings for sidebar
-  const SIDEBAR_TVS_PER_PAGE = 8;
-  const totalSidebarPages = Math.ceil(tvs.length / SIDEBAR_TVS_PER_PAGE);
+  const SIDEBAR_TVS_PER_PAGE = 4;
+  const totalSidebarPages = Math.ceil(filteredAndSortedTVs.length / SIDEBAR_TVS_PER_PAGE);
   const sidebarStartIndex = (sidebarPage - 1) * SIDEBAR_TVS_PER_PAGE;
   const sidebarEndIndex = sidebarStartIndex + SIDEBAR_TVS_PER_PAGE;
-  const paginatedSidebarTVs = tvs.slice(sidebarStartIndex, sidebarEndIndex);
+  const paginatedSidebarTVs = filteredAndSortedTVs.slice(sidebarStartIndex, sidebarEndIndex);
 
   // Pagination settings for welcome page
-  const WELCOME_TVS_PER_PAGE = 6; // Show 4 TVs per page for better layout
-  const totalWelcomePages = Math.ceil(tvs.length / WELCOME_TVS_PER_PAGE);
+  const WELCOME_TVS_PER_PAGE = 2; // Show 6 TVs per page for better layout
+  const totalWelcomePages = Math.ceil(filteredAndSortedTVs.length / WELCOME_TVS_PER_PAGE);
   const welcomeStartIndex = (welcomePage - 1) * WELCOME_TVS_PER_PAGE;
   const welcomeEndIndex = welcomeStartIndex + WELCOME_TVS_PER_PAGE;
-  const paginatedWelcomeTVs = tvs.slice(welcomeStartIndex, welcomeEndIndex);
+  const paginatedWelcomeTVs = filteredAndSortedTVs.slice(welcomeStartIndex, welcomeEndIndex);
 
   // Add sidebar state class to body
   useEffect(() => {
@@ -63,9 +101,9 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
 
   const selectedTVName = getCurrentTVName();
 
-  const handleTVSelection = (tvName) => {
+  const handleTVSelection = useCallback((tvName) => {
     navigate(`/tv/${tvName}`);
-  };
+  }, [navigate]);
 
   const handleSidebarPageChange = (page) => {
     setSidebarPage(page);
@@ -74,6 +112,123 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
   const handleWelcomePageChange = (page) => {
     setWelcomePage(page);
   };
+
+  // Keyboard navigation for smart TVs
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Only handle arrow keys when sidebar is open and not in an input field
+      if (!sidebarOpen || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          setSelectedSidebarIndex(prev => {
+            const newIndex = Math.min(prev + 1, paginatedSidebarTVs.length - 1);
+            // Auto-scroll to keep selected item visible
+            setTimeout(() => {
+              const selectedElement = document.querySelector(`.tv-menu-item:nth-child(${newIndex + 1})`);
+              if (selectedElement) {
+                selectedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 0);
+            return newIndex;
+          });
+          break;
+
+        case 'ArrowUp':
+          event.preventDefault();
+          setSelectedSidebarIndex(prev => {
+            const newIndex = Math.max(prev - 1, 0);
+            // Auto-scroll to keep selected item visible
+            setTimeout(() => {
+              const selectedElement = document.querySelector(`.tv-menu-item:nth-child(${newIndex + 1})`);
+              if (selectedElement) {
+                selectedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 0);
+            return newIndex;
+          });
+          break;
+
+        case 'ArrowRight':
+          event.preventDefault();
+          if (sidebarPage < totalSidebarPages) {
+            handleSidebarPageChange(sidebarPage + 1);
+            setSelectedSidebarIndex(0);
+          }
+          break;
+
+        case 'ArrowLeft':
+          event.preventDefault();
+          if (sidebarPage > 1) {
+            handleSidebarPageChange(sidebarPage - 1);
+            setSelectedSidebarIndex(0);
+          }
+          break;
+
+        case 'Enter':
+        case ' ':
+          event.preventDefault();
+          if (paginatedSidebarTVs[selectedSidebarIndex]) {
+            handleTVSelection(paginatedSidebarTVs[selectedSidebarIndex].value);
+          }
+          break;
+
+        case '/':
+          event.preventDefault();
+          // Focus search input
+          const searchInput = document.querySelector('.tv-search-input');
+          if (searchInput) {
+            searchInput.focus();
+          }
+          break;
+
+        case 'Escape':
+          event.preventDefault();
+          // Clear search if there's a query, otherwise blur any focused element
+          if (searchQuery) {
+            setSearchQuery("");
+          } else {
+            document.activeElement?.blur();
+          }
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen, selectedSidebarIndex, paginatedSidebarTVs, sidebarPage, totalSidebarPages, handleTVSelection, searchQuery]);
+
+  // Reset selected index when page changes or TVs change
+  useEffect(() => {
+    setSelectedSidebarIndex(0);
+  }, [sidebarPage, filteredAndSortedTVs.length]);
+
+  // Reset pagination when search query changes
+  useEffect(() => {
+    setSidebarPage(1);
+    setWelcomePage(1);
+    setSelectedSidebarIndex(0);
+  }, [searchQuery]);
+
+  // Add wheel scrolling support for sidebar
+  useEffect(() => {
+    const handleWheel = (event) => {
+      const sidebar = document.querySelector('.tv-menu');
+      if (sidebar && sidebar.contains(event.target)) {
+        // Allow natural scrolling behavior for the sidebar
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener('wheel', handleWheel, { passive: true });
+    return () => document.removeEventListener('wheel', handleWheel);
+  }, []);
 
   return (
     <div className={`App ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
@@ -108,22 +263,64 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
       {/* Sidebar Menu */}
       <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <h3 className="sidebar-title">Select TV</h3>
+        
+        {/* Search Input */}
+        <div className="tv-search-container">
+          <input
+            type="text"
+            className="tv-search-input"
+            placeholder="Search TVs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setSearchQuery("");
+                e.target.blur();
+              }
+            }}
+          />
+          {searchQuery && (
+            <button
+              className="search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="search-results-info">
+            <small>
+              {filteredAndSortedTVs.length} of {tvs.length} TVs match "{searchQuery}"
+            </small>
+          </div>
+        )}
+
         <nav className="tv-menu">
           {isLoadingTVs ? (
             <div className="loading-message">Loading TVs...</div>
-          ) : tvs.length === 0 ? (
+          ) : filteredAndSortedTVs.length === 0 ? (
             <div className="no-content">
-              <span>No TVs available</span>
+              {searchQuery ? (
+                <span>No TVs found matching "{searchQuery}"</span>
+              ) : (
+                <span>No TVs available</span>
+              )}
             </div>
           ) : (
             <>
-              {paginatedSidebarTVs.map((tv) => (
+              {paginatedSidebarTVs.map((tv, index) => (
                 <button
                   key={tv.value}
                   className={`tv-menu-item ${
                     selectedTVName === tv.value ? "active" : ""
-                  }`}
+                  } ${index === selectedSidebarIndex ? "keyboard-focused" : ""}`}
                   onClick={() => handleTVSelection(tv.value)}
+                  tabIndex={index === selectedSidebarIndex ? 0 : -1}
+                  data-tv-index={index}
                 >
                   <div className="tv-menu-icon">📺</div>
                   <span>{tv.label}</span>
@@ -135,7 +332,8 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
                 <div className="sidebar-pagination">
                   <div className="sidebar-page-info">
                     <small>
-                      {sidebarStartIndex + 1}-{Math.min(sidebarEndIndex, tvs.length)} of {tvs.length}
+                      {sidebarStartIndex + 1}-{Math.min(sidebarEndIndex, filteredAndSortedTVs.length)} of {filteredAndSortedTVs.length}
+                      {searchQuery && ` (filtered)`}
                     </small>
                   </div>
                   <div className="sidebar-page-controls">
@@ -179,10 +377,10 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
                   <p>Select a TV from the sidebar to manage notifications</p>
                   
                   {/* TV Count Info */}
-                  {!isLoadingTVs && tvs.length > 0 && (
+                  {!isLoadingTVs && filteredAndSortedTVs.length > 0 && (
                     <div className="tv-count-info">
                       <span>
-                        Showing {welcomeStartIndex + 1}-{Math.min(welcomeEndIndex, tvs.length)} of {tvs.length} TV{tvs.length !== 1 ? 's' : ''}
+                        Showing {welcomeStartIndex + 1}-{Math.min(welcomeEndIndex, filteredAndSortedTVs.length)} of {filteredAndSortedTVs.length} TV{filteredAndSortedTVs.length !== 1 ? 's' : ''}
                       </span>
                     </div>
                   )}
@@ -190,7 +388,7 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
                   <div className="tv-grid">
                     {isLoadingTVs ? (
                       <div className="loading-message">Loading TVs...</div>
-                    ) : tvs.length === 0 ? (
+                    ) : filteredAndSortedTVs.length === 0 ? (
                       <div className="no-content">
                         <div className="empty-icon">📺</div>
                         <span>No TVs available. Contact admin to add TVs.</span>

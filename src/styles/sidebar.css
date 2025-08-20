@@ -5,12 +5,21 @@
   border-right: 1px solid #e9ecef;
   padding: 2rem 1rem;
   min-height: calc(100vh - 72px);
+  max-height: calc(100vh - 72px);
   position: fixed;
   left: 0;
   top: 72px;
   overflow-y: auto;
-  transition: transform 0.3s ease;
+  overflow-x: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.smart-tv-mode {
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  border-right-color: #667eea;
 }
 
 .sidebar.closed {
@@ -29,10 +38,102 @@
   text-align: center;
 }
 
+/* TV Search */
+.tv-search-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.tv-search-input {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 2.5rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.tv-search-input:focus {
+  border-color: #667eea;
+  background: #f8f9ff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.tv-search-input::placeholder {
+  color: #6c757d;
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+/* Search Results Info */
+.search-results-info {
+  margin-bottom: 0.75rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: #f8f9ff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.search-results-info small {
+  color: #667eea;
+  font-weight: 500;
+}
+
 .tv-menu {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-right: -0.5rem;
+}
+
+/* Custom scrollbar for WebKit browsers */
+.tv-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tv-menu::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tv-menu::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.tv-menu::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .tv-menu-item {
@@ -47,6 +148,21 @@
   font-size: 1rem;
   text-align: left;
   width: 100%;
+  position: relative;
+  outline: none;
+}
+
+.tv-menu-item:focus {
+  border-color: #667eea;
+  background: #f8f9ff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.tv-menu-item.keyboard-focused {
+  border-color: #667eea;
+  background: #f8f9ff;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
 }
 
 .tv-menu-item:hover {
@@ -74,6 +190,7 @@
   background: white;
   border: 1px solid #e9ecef;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .sidebar-page-info {
@@ -133,12 +250,31 @@
     position: relative;
     width: 100%;
     min-height: auto;
+    max-height: 50vh;
     top: 0;
+  }
+
+  .tv-search-container {
+    margin: 0.5rem 0;
+  }
+
+  .tv-search-input {
+    padding: 0.5rem;
+    padding-right: 2rem;
+    font-size: 0.85rem;
+  }
+
+  .search-clear-btn {
+    right: 0.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.25rem;
   }
 
   .tv-menu {
     flex-direction: row;
     overflow-x: auto;
+    max-height: 200px;
   }
 
   .tv-menu-item {
@@ -158,5 +294,25 @@
     min-width: 25px;
     height: 25px;
     font-size: 0.75rem;
+  }
+
+  /* Hide smart TV navigation on mobile */
+  .smart-tv-nav-overlay {
+    display: none;
+  }
+}
+
+/* For Smart TVs and larger screens */
+@media (min-width: 1200px) {
+  .tv-menu::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  .tv-menu::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+  }
+  
+  .tv-menu::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
   }
 }
