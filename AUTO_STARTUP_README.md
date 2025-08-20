@@ -1,6 +1,6 @@
-# Notification Manager Auto-Startup Scripts
+# TVManager Auto-Startup Scripts
 
-This directory contains scripts to automate the startup of both frontend and backend servers for the Notification Manager system.
+This directory contains scripts to automate the startup of both frontend and backend servers for the TVManager system.
 
 ## Files Overview
 
@@ -109,7 +109,7 @@ For Linux systems, you can create systemd services:
 2. **Add content:**
    ```ini
    [Unit]
-   Description=Notification Manager System
+   Description=TVManager System
    After=network.target
 
    [Service]

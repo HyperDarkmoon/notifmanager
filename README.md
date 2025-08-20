@@ -1,4 +1,4 @@
-# Notification Manager - Frontend
+# TVManager - Frontend
 
 ![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript)

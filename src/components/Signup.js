@@ -93,7 +93,7 @@ function Signup({ onSignupSuccess }) {
         <div className="login-card">
           <div className="login-header">
             <img src={company} alt="Company Logo" className="login-logo" />
-            <h1 className="login-title">Notification Manager</h1>
+            <h1 className="login-title">TVManager</h1>
             <p className="login-subtitle">Create your account</p>
           </div>
 

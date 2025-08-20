@@ -1,8 +1,8 @@
 @echo off
-REM Windows Batch Script to Stop Notification Manager System
+REM Windows Batch Script to Stop TVManager System
 
 echo ===========================================
-echo Stopping Notification Manager System
+echo Stopping TVManager System
 echo ===========================================
 
 REM Kill processes on specific ports
@@ -54,7 +54,7 @@ if %errorlevel% equ 0 (
 )
 
 echo ===========================================
-echo Notification Manager System Stopped
+echo TVManager System Stopped
 echo ===========================================
 
 REM Keep window open if run manually

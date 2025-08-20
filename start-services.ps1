@@ -1,4 +1,4 @@
-# PowerShell Script for Notification Manager Auto-Startup
+# PowerShell Script for TVManager Auto-Startup
 # This script is designed to work with Windows Task Scheduler
 
 param(
@@ -141,7 +141,7 @@ function Wait-ForService {
 }
 
 try {
-    Write-Log "Starting Notification Manager System" "Info"
+    Write-Log "Starting TVManager System" "Info"
     
     # Rotate logs if they're too large
     Write-Log "Checking and rotating large log files..."
@@ -491,7 +491,7 @@ if %errorlevel% neq 0 (
         Write-Log "Frontend directory not found: $FrontendDir" "Error"
     }
     
-    Write-Log "Notification Manager System startup completed"
+    Write-Log "TVManager System startup completed"
     Write-Log "Services status:"
     Write-Log "  MySQL Database: http://10.47.15.227:3306"
     Write-Log "  Frontend: http://10.47.15.227:3000"

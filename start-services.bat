@@ -1,9 +1,9 @@
 @echo off
-REM Windows Batch Script to Start Notification Manager System
+REM Windows Batch Script to Start TVManager System
 REM This script can be used with Windows Task Scheduler for auto-startup
 
 echo ===========================================
-echo Notification Manager System Startup
+echo TVManager System Startup
 echo ===========================================
 
 REM Set directories
@@ -170,7 +170,7 @@ echo Waiting for frontend to start...
 timeout /t 10 /nobreak >nul
 
 echo ===========================================
-echo Notification Manager System Started
+echo TVManager System Started
 echo ===========================================
 echo Services status:
 echo   MySQL Database: http://localhost:3306

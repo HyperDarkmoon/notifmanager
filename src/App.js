@@ -87,7 +87,7 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
             ☰
           </button>
           <img src={company} alt="Company Logo" className="company-logo" />
-          <h1 className="navbar-title">Notification Manager</h1>
+          <h1 className="navbar-title">TVManager</h1>
           <div className="navbar-actions">
             {isAuthenticated ? (
               <button className="logout-button" onClick={onLogout}>
@@ -175,7 +175,7 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
               path="/"
               element={
                 <div className="welcome-section">
-                  <h1>Welcome to Notification Manager</h1>
+                  <h1>Welcome to TVManager</h1>
                   <p>Select a TV from the sidebar to manage notifications</p>
                   
                   {/* TV Count Info */}
@@ -287,7 +287,7 @@ function LoginLayout({ onLogin }) {
       <nav className="navbar">
         <div className="navbar-content">
           <img src={company} alt="Company Logo" className="company-logo" />
-          <h1 className="navbar-title">Notification Manager</h1>
+          <h1 className="navbar-title">TVManager</h1>
           <div className="navbar-actions">
             <button 
               className="login-button" 
@@ -314,7 +314,7 @@ function SignupLayout({ onSignupSuccess }) {
       <nav className="navbar">
         <div className="navbar-content">
           <img src={company} alt="Company Logo" className="company-logo" />
-          <h1 className="navbar-title">Notification Manager</h1>
+          <h1 className="navbar-title">TVManager</h1>
           <div className="navbar-actions">
             <button 
               className="login-button" 
