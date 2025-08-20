@@ -220,13 +220,8 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
       clearTimeout(videoEndTimeoutRef.current);
     }
 
-    // Reset to first slide when content changes, but preserve current index if still valid
-    setContentIndex((prevIndex) => {
-      if (prevIndex >= contentCount) {
-        return 0; // Reset to first slide if current index is invalid
-      }
-      return prevIndex; // Keep current index if still valid
-    });
+    // Always reset to first slide when content changes to ensure users see the complete sequence
+    setContentIndex(0);
 
     const startRotation = () => {
       rotationIntervalRef.current = setInterval(() => {
