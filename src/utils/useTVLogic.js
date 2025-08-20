@@ -117,6 +117,8 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
   useEffect(() => {
     setImageSetIndex(0);
     setVideoSetIndex(0);
+    // Reset content index to 0 when content changes to ensure profiles start from first slide
+    setContentIndex(0);
   }, [customContent]);
 
   // Image set rotation for custom content (separate from main content rotation)
@@ -219,9 +221,6 @@ export const useTVLogic = (tvId, initialTemperature, initialPressure) => {
     if (videoEndTimeoutRef.current) {
       clearTimeout(videoEndTimeoutRef.current);
     }
-
-    // Always reset to first slide when content changes to ensure users see the complete sequence
-    setContentIndex(0);
 
     const startRotation = () => {
       rotationIntervalRef.current = setInterval(() => {
