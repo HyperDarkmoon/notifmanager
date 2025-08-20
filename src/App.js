@@ -21,6 +21,7 @@ import Signup from "./components/Signup";
 import AdminPanel from "./components/AdminPanel";
 import DeviceData from "./components/DeviceData";
 import { useTVData } from "./utils/useTVData";
+import { naturalSortTVs } from "./utils/sortingUtils";
 
 // Component to handle navigation and layout
 function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
@@ -34,22 +35,7 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
   const { tvs, isLoading: isLoadingTVs } = useTVData();
 
   // Natural sort function to handle TV1, TV2, ..., TV10 correctly
-  const naturalSort = (a, b) => {
-    const extractNumber = (str) => {
-      const match = str.match(/(\d+)/);
-      return match ? parseInt(match[1], 10) : 0;
-    };
-    
-    const aNum = extractNumber(a.value);
-    const bNum = extractNumber(b.value);
-    
-    if (aNum !== bNum) {
-      return aNum - bNum;
-    }
-    
-    // If numbers are the same or no numbers found, use alphabetical sort
-    return a.value.localeCompare(b.value);
-  };
+  const naturalSort = naturalSortTVs;
 
   // Filter and sort TVs
   const filteredAndSortedTVs = React.useMemo(() => {
@@ -67,7 +53,7 @@ function NavigationLayoutWithLogout({ onLogout, isAuthenticated }) {
     
     // Sort naturally
     return filtered.sort(naturalSort);
-  }, [tvs, searchQuery]);
+  }, [tvs, searchQuery, naturalSort]);
 
   // Pagination settings for sidebar
   const SIDEBAR_TVS_PER_PAGE = 4;

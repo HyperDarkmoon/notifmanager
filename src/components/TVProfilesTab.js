@@ -4,6 +4,7 @@ import { formatScheduleDate } from "../utils/contentScheduleUtils";
 import { getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
 import { useTVData } from "../utils/useTVData";
+import { naturalSortTVs } from "../utils/sortingUtils";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
@@ -11,6 +12,15 @@ import DailyScheduleInput from "./DailyScheduleInput";
 const TVProfilesTab = React.memo(() => {
   // Use dynamic TV data - include inactive TVs for admin assignment purposes
   const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(true, true);
+  
+  // Natural sort function to handle TV1, TV2, ..., TV10 correctly
+  const naturalSort = naturalSortTVs;
+  
+  // Get sorted active TVs for assignment dropdown
+  const sortedActiveTVs = React.useMemo(() => {
+    return TV_OPTIONS.filter(tv => tv.active).sort(naturalSort);
+  }, [TV_OPTIONS, naturalSort]);
+  
   // Profile management state
   const [profiles, setProfiles] = useState([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
@@ -1130,15 +1140,15 @@ const TVProfilesTab = React.memo(() => {
                 <option value="">
                   {isLoadingTVs ? "Loading TVs..." : "Choose a TV..."}
                 </option>
-                {TV_OPTIONS.map((tv) => (
+                {sortedActiveTVs.map((tv) => (
                   <option key={tv.value} value={tv.value}>
                     {tv.icon} {tv.label}
                   </option>
                 ))}
               </select>
-              {TV_OPTIONS.length === 0 && !isLoadingTVs && (
+              {sortedActiveTVs.length === 0 && !isLoadingTVs && (
                 <small className="form-help error">
-                  No TVs available. Please create TVs in the TV Management tab first.
+                  No active TVs available. Please create and activate TVs in the TV Management tab first.
                 </small>
               )}
             </div>

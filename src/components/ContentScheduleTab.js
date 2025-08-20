@@ -4,6 +4,7 @@ import { formatScheduleDate, getImagesPerSetForContentType } from "../utils/cont
 import { getInitialFormData, getCurrentDateTime, getCurrentTime, truncateFileName } from "../utils/adminUtils";
 import { CONTENT_TYPES, MAX_BASE64_SIZE_IMAGES, MAX_BASE64_SIZE_VIDEOS, MAX_FALLBACK_SIZE } from "../constants/adminConstants";
 import { useTVData } from "../utils/useTVData";
+import { naturalSortTVs } from "../utils/sortingUtils";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import TimeScheduleList from "./TimeScheduleList";
 import DailyScheduleInput from "./DailyScheduleInput";
@@ -11,7 +12,15 @@ import SearchableDropdown from "./SearchableDropdown";
 
 const ContentScheduleTab = React.memo(() => {
   // Use dynamic TV data
-  const { tvs: TV_OPTIONS, isLoading: isLoadingTVs } = useTVData(false, true);
+  const { tvs: TV_OPTIONS_RAW, isLoading: isLoadingTVs } = useTVData(false, true);
+  
+  // Natural sort function to handle TV1, TV2, ..., TV10 correctly
+  const naturalSort = naturalSortTVs;
+  
+  // Get sorted TVs
+  const TV_OPTIONS = React.useMemo(() => {
+    return TV_OPTIONS_RAW.sort(naturalSort);
+  }, [TV_OPTIONS_RAW, naturalSort]);
   
   // Form state - use memoized initial data
   const [formData, setFormData] = useState(() => getInitialFormData());
@@ -606,7 +615,7 @@ const ContentScheduleTab = React.memo(() => {
       };
 
       await makeAuthenticatedRequest(
-        API_ENDPOINTS.CONTENT_BY_ID(schedule.id),
+        `${API_ENDPOINTS.CONTENT_BY_ID(schedule.id)}/from-request`,
         {
           method: "PUT",
           body: JSON.stringify(updatedSchedule),
